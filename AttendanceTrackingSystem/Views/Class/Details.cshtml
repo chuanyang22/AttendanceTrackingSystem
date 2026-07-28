@@ -1,0 +1,47 @@
+﻿@model AttendanceTrackingSystem.Models.SchoolClass
+
+@{
+    ViewData["Title"] = "Class Details";
+}
+
+<h1>Class Details</h1>
+
+<dl class="row">
+    <dt class="col-sm-2">Class Name</dt>
+    <dd class="col-sm-10">@Model.ClassName</dd>
+
+    <dt class="col-sm-2">Schedule</dt>
+    <dd class="col-sm-10">@Model.Schedule</dd>
+
+    <dt class="col-sm-2">Teacher</dt>
+    <dd class="col-sm-10">@Model.TeacherName</dd>
+</dl>
+
+<h3>Enrolled Students</h3>
+@if (Model.Enrollments != null && Model.Enrollments.Any())
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Student Name</th>
+                <th>Enroll Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var enrollment in Model.Enrollments)
+            {
+                <tr>
+                    <td>@enrollment.Student?.Name</td>
+                    <td>@enrollment.EnrollDate.ToShortDateString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No students enrolled in this class yet.</p>
+}
+
+<a asp-action="Edit" asp-route-id="@Model.ClassId" class="btn btn-primary">Edit</a>
+<a asp-action="Index" class="btn btn-secondary">Back to List</a>

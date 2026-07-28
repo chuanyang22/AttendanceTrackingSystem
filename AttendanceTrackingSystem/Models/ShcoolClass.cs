@@ -14,6 +14,10 @@ namespace AttendanceTrackingSystem.Models
         [StringLength(100)]
         public string? Schedule { get; set; }
 
+        [Required(ErrorMessage = "Please assign a teacher to this class.")]
+        [StringLength(100)]
+        public string TeacherName { get; set; } = string.Empty;
+
         public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
     }
 }

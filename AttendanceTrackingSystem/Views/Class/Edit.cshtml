@@ -1,0 +1,40 @@
+﻿@model AttendanceTrackingSystem.Models.SchoolClass
+
+@{
+    ViewData["Title"] = "Edit Class";
+}
+
+<h1>Edit Class</h1>
+
+<form asp-action="Edit">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" asp-for="ClassId" />
+
+    <div class="form-group">
+        <label asp-for="ClassName"></label>
+        <input asp-for="ClassName" class="form-control" />
+        <span asp-validation-for="ClassName" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Schedule"></label>
+        <input asp-for="Schedule" class="form-control" />
+        <span asp-validation-for="Schedule" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="TeacherName">Assign Teacher</label>
+        <input asp-for="TeacherName" class="form-control" />
+        <span asp-validation-for="TeacherName" class="text-danger"></span>
+    </div>
+
+    <br />
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
