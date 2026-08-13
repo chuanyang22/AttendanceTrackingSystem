@@ -23,5 +23,7 @@ namespace AttendanceTrackingSystem.Models
         public string Status { get; set; } = "Active"; // Active / Inactive / Graduated
 
         public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
+        public ICollection<AttendanceRecord> AttendanceRecords { get; set; } = new List<AttendanceRecord>();
+
     }
 }

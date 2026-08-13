@@ -19,5 +19,7 @@ namespace AttendanceTrackingSystem.Models
         public string TeacherName { get; set; } = string.Empty;
 
         public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
+        public ICollection<AttendanceSession> AttendanceSessions { get; set; } = new List<AttendanceSession>();
+        
     }
 }
