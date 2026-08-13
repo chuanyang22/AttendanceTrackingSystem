@@ -1,0 +1,18 @@
+@model AttendanceTrackingSystem.Models.AttendanceSession
+@{
+    ViewData["Title"] = "QR Code Check-in";
+    var qrApiUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={Url.Action("QuickCheckIn", "Attendance", new { token = Model.QRCodeToken }, Context.Request.Scheme)}";
+}
+
+<div class="text-center my-4">
+    <h2>QR Code Check-in</h2>
+    <h4>Class: @Model.SchoolClass?.ClassName</h4>
+    <p class="text-muted">Date: @Model.SessionDate.ToString("dd MMM yyyy")</p>
+
+    <div class="my-4">
+        <img src="@qrApiUrl" alt="Attendance QR Code" class="img-thumbnail shadow" style="width: 250px; height: 250px;" />
+    </div>
+
+    <p class="text-secondary">Scan this QR Code using a mobile camera or device to check in automatically.</p>
+    <a asp-action="Index" class="btn btn-secondary">Back to Sessions</a>
+</div>

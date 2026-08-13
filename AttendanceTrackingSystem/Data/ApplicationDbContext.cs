@@ -13,5 +13,7 @@ namespace AttendanceTrackingSystem.Data
         public DbSet<Student> Students { get; set; }
         public DbSet<SchoolClass> SchoolClasses { get; set; }
         public DbSet<Enrollment> Enrollments { get; set; }
+        public DbSet<AttendanceSession> AttendanceSessions { get; set; }
+        public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
     }
 }

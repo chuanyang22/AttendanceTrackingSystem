@@ -22,6 +22,10 @@
                        asp-controller="Class" asp-action="Index">Classes</a>
                     <a class="nav-link text-light @(currentController == "Enrollment" ? "active fw-bold text-decoration-underline" : "")"
                        asp-controller="Enrollment" asp-action="Index">Enrollments</a>
+                    <a class="nav-link text-light @(currentController == "Attendance" ? "active fw-bold text-decoration-underline" : "")"
+                       asp-controller="Attendance" asp-action="Index">Attendance Sessions</a>
+                    <a class="nav-link text-light @(currentController == "AttendanceReport" ? "active fw-bold text-decoration-underline" : "")"
+                       asp-controller="AttendanceReport" asp-action="ClassReport">Reports</a>
                 </div>
             </div>
         </nav>

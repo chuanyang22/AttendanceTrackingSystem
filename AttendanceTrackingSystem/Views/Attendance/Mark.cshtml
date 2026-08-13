@@ -1,0 +1,62 @@
+@model AttendanceTrackingSystem.Models.ViewModels.MarkAttendanceViewModel
+@{
+    ViewData["Title"] = "Mark Attendance";
+}
+
+<h1>Mark Attendance</h1>
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>Class: <strong>@Model.ClassName</strong> | Teacher: <strong>@Model.TeacherName</strong></h5>
+        <p class="mb-0 text-muted">Date: @Model.SessionDate.ToString("dd MMMM yyyy") @(!string.IsNullOrEmpty(Model.Topic) ? $"| Topic: {Model.Topic}" : "")</p>
+    </div>
+</div>
+
+<form asp-action="Mark" method="post">
+    <input type="hidden" asp-for="SessionId" />
+
+    <table class="table table-bordered align-middle">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 25%">Student Name</th>
+                <th style="width: 25%">Email</th>
+                <th style="width: 30%">Status</th>
+                <th style="width: 20%">Remarks</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.Students.Count; i++)
+            {
+                <tr>
+                    <td>
+                        @Model.Students[i].StudentName
+                        <input type="hidden" asp-for="Students[i].StudentId" />
+                        <input type="hidden" asp-for="Students[i].StudentName" />
+                        <input type="hidden" asp-for="Students[i].StudentEmail" />
+                    </td>
+                    <td>@Model.Students[i].StudentEmail</td>
+                    <td>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" asp-for="Students[i].Status" value="Present" id="pres_@i" />
+                            <label class="btn btn-outline-success btn-sm" for="pres_@i">Present</label>
+
+                            <input type="radio" class="btn-check" asp-for="Students[i].Status" value="Late" id="late_@i" />
+                            <label class="btn btn-outline-warning btn-sm" for="late_@i">Late</label>
+
+                            <input type="radio" class="btn-check" asp-for="Students[i].Status" value="Absent" id="abs_@i" />
+                            <label class="btn btn-outline-danger btn-sm" for="abs_@i">Absent</label>
+
+                            <input type="radio" class="btn-check" asp-for="Students[i].Status" value="Excused" id="exc_@i" />
+                            <label class="btn btn-outline-info btn-sm" for="exc_@i">Excused</label>
+                        </div>
+                    </td>
+                    <td>
+                        <input asp-for="Students[i].Remarks" class="form-control form-control-sm" placeholder="Optional remark" />
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button type="submit" class="btn btn-primary">Save Attendance</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>

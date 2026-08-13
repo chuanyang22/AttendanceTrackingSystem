@@ -8,6 +8,8 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddScoped<AttendanceTrackingSystem.Services.IEmailService, AttendanceTrackingSystem.Services.EmailService>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
