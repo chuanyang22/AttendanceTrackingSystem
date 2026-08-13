@@ -1,0 +1,42 @@
+﻿@model AttendanceTrackingSystem.Models.Enrollment
+
+@{
+    ViewData["Title"] = "Enroll Student";
+}
+
+<h1>Enroll Student in Class</h1>
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<form asp-action="Create" method="post">
+    <div class="form-group mb-3">
+        <label class="control-label">Student</label>
+        <select asp-for="StudentId" class="form-select" asp-items="ViewBag.StudentId">
+            <option value="">-- Select Student --</option>
+        </select>
+        <span asp-validation-for="StudentId" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label class="control-label">Class</label>
+        <select asp-for="ClassId" class="form-select" asp-items="ViewBag.ClassId">
+            <option value="">-- Select Class --</option>
+        </select>
+        <span asp-validation-for="ClassId" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label asp-for="EnrollDate" class="control-label"></label>
+        <input asp-for="EnrollDate" class="form-control" type="date" value="@Model.EnrollDate.ToString("yyyy-MM-dd")" />
+        <span asp-validation-for="EnrollDate" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Enroll</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -1,0 +1,40 @@
+﻿@model IEnumerable<AttendanceTrackingSystem.Models.Enrollment>
+
+@{
+    ViewData["Title"] = "Enrollments";
+}
+
+<h1>Enrollments</h1>
+
+<p>
+    <a asp-action="Create" class="btn btn-primary">+ Enroll Student in Class</a>
+</p>
+
+<form asp-action="Index" method="get" class="mb-3">
+    <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" placeholder="Search by student or class name" />
+    <button type="submit" class="btn btn-secondary">Search</button>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Student</th>
+            <th>Class</th>
+            <th>Enroll Date</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Student?.Name</td>
+                <td>@item.SchoolClass?.ClassName</td>
+                <td>@item.EnrollDate.ToShortDateString()</td>
+                <td>
+                    <a asp-action="Delete" asp-route-id="@item.EnrollmentId">Remove</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

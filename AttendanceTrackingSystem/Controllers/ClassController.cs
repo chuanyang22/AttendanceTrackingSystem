@@ -26,7 +26,15 @@ namespace AttendanceTrackingSystem.Controllers
             }
 
             ViewData["CurrentFilter"] = searchString;
-            return View(await classes.ToListAsync());
+
+            var result = await classes.ToListAsync();
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return PartialView("_ClassTable", result);
+            }
+
+            return View(result);
         }
 
         // GET: Class/Details/5

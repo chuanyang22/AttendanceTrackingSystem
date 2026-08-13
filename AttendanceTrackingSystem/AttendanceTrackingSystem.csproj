@@ -21,7 +21,6 @@
 
   <ItemGroup>
     <Folder Include="Views\Shared\" />
-    <Folder Include="Views\Student\" />
     <Folder Include="wwwroot\css\" />
   </ItemGroup>
 

@@ -1,0 +1,112 @@
+﻿@model List<AttendanceTrackingSystem.Models.Student>
+
+@{
+    ViewData["Title"] = "Add Multiple Students";
+}
+
+<h1>Add Multiple Students</h1>
+<p class="text-muted">Fill in as many rows as you need. Use "+ Add Row" for more, or leave rows blank to skip them.</p>
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<form asp-action="BatchCreate" method="post">
+    <table class="table" id="batchTable">
+        <thead>
+            <tr>
+                <th style="width:25%">Name</th>
+                <th style="width:25%">Email</th>
+                <th style="width:20%">Phone</th>
+                <th style="width:15%">Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.Count; i++)
+            {
+                <tr class="batch-row">
+                    <td>
+                        <input asp-for="@Model[i].Name" class="form-control" placeholder="Full name" />
+                        <span asp-validation-for="@Model[i].Name" class="text-danger"></span>
+                    </td>
+                    <td>
+                        <input asp-for="@Model[i].Email" class="form-control" placeholder="email@example.com" />
+                        <span asp-validation-for="@Model[i].Email" class="text-danger"></span>
+                    </td>
+                    <td>
+                        <input asp-for="@Model[i].Phone" class="form-control" placeholder="Phone number" />
+                        <span asp-validation-for="@Model[i].Phone" class="text-danger"></span>
+                    </td>
+                    <td>
+                        <select asp-for="@Model[i].Status" class="form-select">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Graduated">Graduated</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-row">&times;</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button type="button" id="addRowBtn" class="btn btn-outline-secondary btn-sm mb-3">+ Add Row</button>
+    <br />
+
+    <button type="submit" class="btn btn-primary">Save All Students</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        (function() {
+            const tableBody = document.querySelector('#batchTable tbody');
+            const addRowBtn = document.getElementById('addRowBtn');
+
+            function reindexRows() {
+                const rows = tableBody.querySelectorAll('.batch-row');
+                rows.forEach((row, index) => {
+                    row.querySelectorAll('[name], [id]').forEach(el => {
+                        if (el.name) {
+                            el.name = el.name.replace(/students\[\d+\]/, 'students[' + index + ']');
+                        }
+                        if (el.id) {
+                            el.id = el.id.replace(/students_\d+__/, 'students_' + index + '__');
+                        }
+                    });
+                });
+            }
+
+            addRowBtn.addEventListener('click', function() {
+                const firstRow = tableBody.querySelector('.batch-row');
+                const newRow = firstRow.cloneNode(true);
+
+                newRow.querySelectorAll('input').forEach(input => input.value = '');
+                newRow.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+                newRow.querySelectorAll('.text-danger').forEach(span => span.textContent = '');
+
+                tableBody.appendChild(newRow);
+                reindexRows();
+            });
+
+            tableBody.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-row')) {
+                    const rows = tableBody.querySelectorAll('.batch-row');
+                    if (rows.length > 1) {
+                        e.target.closest('.batch-row').remove();
+                        reindexRows();
+                    } else {
+                        const row = e.target.closest('.batch-row');
+                        row.querySelectorAll('input').forEach(input => input.value = '');
+                        row.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+                    }
+                }
+            });
+        })();
+    </script>
+}

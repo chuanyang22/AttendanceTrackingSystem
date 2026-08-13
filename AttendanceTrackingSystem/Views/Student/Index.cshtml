@@ -6,50 +6,52 @@
 
 <h1>Students</h1>
 
+@if (TempData["BatchSuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["BatchSuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <p>
     <a asp-action="Create" class="btn btn-primary">+ Add New Student</a>
+    <a asp-action="BatchCreate" class="btn btn-outline-primary">+ Add Multiple Students</a>
 </p>
 
-<form asp-action="Index" method="get" class="mb-3">
-    <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" placeholder="Search by name or email" />
-    <button type="submit" class="btn btn-secondary">Search</button>
-</form>
+<div class="mb-3">
+    <input type="text" id="searchBox" class="form-control" value="@ViewData["CurrentFilter"]" placeholder="Search by name or email..." />
+</div>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Status</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.Name</td>
-                <td>@item.Email</td>
-                <td>@item.Phone</td>
-                <td>
-                    @{
-                        var badgeClass = item.Status switch
-                        {
-                            "Active" => "badge bg-success",
-                            "Inactive" => "badge bg-secondary",
-                            "Graduated" => "badge bg-info",
-                            _ => "badge bg-light"
-                        };
-                    }
-                    <span class="@badgeClass">@item.Status</span>
-                </td>
-                <td>
-                    <a asp-action="Details" asp-route-id="@item.StudentId">Details</a> |
-                    <a asp-action="Edit" asp-route-id="@item.StudentId">Edit</a> |
-                    <a asp-action="Delete" asp-route-id="@item.StudentId">Delete</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div id="studentTableContainer">
+    @await Html.PartialAsync("_StudentTable", Model)
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const searchBox = document.getElementById('searchBox');
+            const container = document.getElementById('studentTableContainer');
+            let debounceTimer;
+
+            searchBox.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function () {
+                    const query = searchBox.value;
+                    const url = '@Url.Action("Index", "Student")' + '?searchString=' + encodeURIComponent(query);
+
+                    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(response => response.text())
+                        .then(html => {
+                            container.innerHTML = html;
+                            const newUrl = query
+                                ? '@Url.Action("Index", "Student")' + '?searchString=' + encodeURIComponent(query)
+                                : '@Url.Action("Index", "Student")';
+                            history.replaceState(null, '', newUrl);
+                        })
+                        .catch(err => console.error('Search failed:', err));
+                }, 300);
+            });
+        })();
+    </script>
+}

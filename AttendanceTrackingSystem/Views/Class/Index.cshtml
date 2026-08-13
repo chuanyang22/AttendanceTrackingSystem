@@ -10,33 +10,39 @@
     <a asp-action="Create" class="btn btn-primary">+ Add New Class</a>
 </p>
 
-<form asp-action="Index" method="get" class="mb-3">
-    <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" placeholder="Search by class name or teacher" />
-    <button type="submit" class="btn btn-secondary">Search</button>
-</form>
+<div class="mb-3">
+    <input type="text" id="searchBox" class="form-control" value="@ViewData["CurrentFilter"]" placeholder="Search by class name or teacher..." />
+</div>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Class Name</th>
-            <th>Schedule</th>
-            <th>Teacher</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.ClassName</td>
-                <td>@item.Schedule</td>
-                <td>@item.TeacherName</td>
-                <td>
-                    <a asp-action="Details" asp-route-id="@item.ClassId">Details</a> |
-                    <a asp-action="Edit" asp-route-id="@item.ClassId">Edit</a> |
-                    <a asp-action="Delete" asp-route-id="@item.ClassId">Delete</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div id="classTableContainer">
+    @await Html.PartialAsync("_ClassTable", Model)
+</div>
+
+@section Scripts {
+    <script>
+        (function() {
+            const searchBox = document.getElementById('searchBox');
+            const container = document.getElementById('classTableContainer');
+            let debounceTimer;
+
+            searchBox.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function() {
+                    const query = searchBox.value;
+                    const url = '@Url.Action("Index", "Class")' + '?searchString=' + encodeURIComponent(query);
+
+                    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(response => response.text())
+                        .then(html => {
+                            container.innerHTML = html;
+                            const newUrl = query
+                                ? '@Url.Action("Index", "Class")' + '?searchString=' + encodeURIComponent(query)
+                                : '@Url.Action("Index", "Class")';
+                            history.replaceState(null, '', newUrl);
+                        })
+                        .catch(err => console.error('Search failed:', err));
+                }, 300);
+            });
+        })();
+    </script>
+}

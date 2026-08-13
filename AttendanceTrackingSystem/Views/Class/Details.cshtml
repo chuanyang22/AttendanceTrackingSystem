@@ -18,6 +18,9 @@
 </dl>
 
 <h3>Enrolled Students</h3>
+<p>
+    <a asp-controller="Enrollment" asp-action="Create" asp-route-classId="@Model.ClassId" class="btn btn-primary btn-sm">+ Enroll Student</a>
+</p>
 @if (Model.Enrollments != null && Model.Enrollments.Any())
 {
     <table class="table table-striped">
@@ -25,6 +28,7 @@
             <tr>
                 <th>Student Name</th>
                 <th>Enroll Date</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -33,6 +37,9 @@
                 <tr>
                     <td>@enrollment.Student?.Name</td>
                     <td>@enrollment.EnrollDate.ToShortDateString()</td>
+                    <td>
+                        <a asp-controller="Enrollment" asp-action="Delete" asp-route-id="@enrollment.EnrollmentId">Remove</a>
+                    </td>
                 </tr>
             }
         </tbody>

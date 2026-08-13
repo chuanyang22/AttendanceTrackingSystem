@@ -8,15 +8,20 @@
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
+    @{
+        var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    }
     <header>
         <nav class="navbar navbar-expand-sm navbar-dark bg-dark mb-4">
             <div class="container">
                 <a class="navbar-brand" asp-controller="Student" asp-action="Index">Attendance Tracking System</a>
                 <div class="navbar-nav">
-                    <a class="nav-link text-light" asp-controller="Student" asp-action="Index">Students</a>
-                    <a class="nav-link text-light" asp-controller="Class" asp-action="Index">Classes</a>
-                    <a class="nav-link text-light" asp-controller="Teacher" asp-action="Index">Teachers</a>
-                    <a class="nav-link text-light" asp-controller="Enrollment" asp-action="Index">Enrollments</a>
+                    <a class="nav-link text-light @(currentController == "Student" ? "active fw-bold text-decoration-underline" : "")"
+                       asp-controller="Student" asp-action="Index">Students</a>
+                    <a class="nav-link text-light @(currentController == "Class" ? "active fw-bold text-decoration-underline" : "")"
+                       asp-controller="Class" asp-action="Index">Classes</a>
+                    <a class="nav-link text-light @(currentController == "Enrollment" ? "active fw-bold text-decoration-underline" : "")"
+                       asp-controller="Enrollment" asp-action="Index">Enrollments</a>
                 </div>
             </div>
         </nav>

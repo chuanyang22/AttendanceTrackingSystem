@@ -15,8 +15,8 @@ namespace AttendanceTrackingSystem.Models
         [EmailAddress(ErrorMessage = "Enter a valid email.")]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
-        [Phone(ErrorMessage = "Enter a valid phone number.")]
+        [Required(ErrorMessage = "Phone number is required.")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "Phone number must be exactly 10 digits.")]
         public string Phone { get; set; } = string.Empty;
 
         [Required]

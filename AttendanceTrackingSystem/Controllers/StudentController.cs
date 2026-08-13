@@ -26,7 +26,15 @@ namespace AttendanceTrackingSystem.Controllers
             }
 
             ViewData["CurrentFilter"] = searchString;
-            return View(await students.ToListAsync());
+
+            var result = await students.ToListAsync();
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return PartialView("_StudentTable", result);
+            }
+
+            return View(result);
         }
 
         // GET: Student/Details/5
@@ -63,6 +71,59 @@ namespace AttendanceTrackingSystem.Controllers
             }
             return View(student);
         }
+        // GET: Student/BatchCreate
+        public IActionResult BatchCreate()
+        {
+            // Start with 3 blank rows for the user to fill in
+            var students = new List<Student> { new Student(), new Student(), new Student() };
+            return View(students);
+        }
+
+        // POST: Student/BatchCreate
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BatchCreate(List<Student> students)
+        {
+            // Ignore completely blank rows (user didn't fill them in)
+            var rowsToProcess = new List<Student>();
+            for (int i = 0; i < students.Count; i++)
+            {
+                var s = students[i];
+                bool isBlank = string.IsNullOrWhiteSpace(s.Name)
+                    && string.IsNullOrWhiteSpace(s.Email)
+                    && string.IsNullOrWhiteSpace(s.Phone);
+
+                if (isBlank)
+                {
+                    ModelState.Remove($"students[{i}].Name");
+                    ModelState.Remove($"students[{i}].Email");
+                    ModelState.Remove($"students[{i}].Phone");
+                    ModelState.Remove($"students[{i}].Status");
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(s.Status)) s.Status = "Active";
+                rowsToProcess.Add(s);
+            }
+
+            if (rowsToProcess.Count == 0)
+            {
+                ModelState.AddModelError(string.Empty, "Please fill in at least one student row.");
+                return View(students);
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View(students);
+            }
+
+            _context.Students.AddRange(rowsToProcess);
+            await _context.SaveChangesAsync();
+
+            TempData["BatchSuccessMessage"] = $"{rowsToProcess.Count} student(s) added successfully.";
+            return RedirectToAction(nameof(Index));
+        }
+
 
         // GET: Student/Edit/5
         public async Task<IActionResult> Edit(int? id)
