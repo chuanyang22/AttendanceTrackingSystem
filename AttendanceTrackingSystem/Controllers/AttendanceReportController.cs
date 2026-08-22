@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +8,7 @@ using AttendanceTrackingSystem.Models.ViewModels;
 
 namespace AttendanceTrackingSystem.Controllers
 {
+    [Authorize]
     public class AttendanceReportController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -16,8 +19,24 @@ namespace AttendanceTrackingSystem.Controllers
         }
 
         // Student Individual Attendance History & Percentage
+        [HttpGet]
         public async Task<IActionResult> StudentHistory(int? studentId)
         {
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            var isStudent = User.IsInRole("Student");
+
+            // Auto-detect matching student profile if logged in as Student
+            if (isStudent && !string.IsNullOrEmpty(userEmail))
+            {
+                var studentProfile = await _context.Students
+                    .FirstOrDefaultAsync(s => s.Email.ToLower() == userEmail.ToLower());
+
+                if (studentProfile != null)
+                {
+                    studentId = studentProfile.StudentId;
+                }
+            }
+
             if (!studentId.HasValue)
             {
                 ViewData["StudentId"] = new SelectList(_context.Students.OrderBy(s => s.Name), "StudentId", "Name");
@@ -30,15 +49,23 @@ namespace AttendanceTrackingSystem.Controllers
                         .ThenInclude(s => s!.SchoolClass)
                 .FirstOrDefaultAsync(s => s.StudentId == studentId.Value);
 
-            if (student == null) return NotFound();
-
-            var records = student.AttendanceRecords.Select(r => new AttendanceRecordDetail
+            if (student == null)
             {
-                Date = r.AttendanceSession?.SessionDate ?? DateTime.MinValue,
-                ClassName = r.AttendanceSession?.SchoolClass?.ClassName ?? "N/A",
-                Status = r.Status,
-                Remarks = r.Remarks
-            }).OrderByDescending(r => r.Date).ToList();
+                ViewData["StudentId"] = new SelectList(_context.Students.OrderBy(s => s.Name), "StudentId", "Name", studentId);
+                return View(null);
+            }
+
+            var records = student.AttendanceRecords
+                .Where(r => r.AttendanceSession != null)
+                .Select(r => new AttendanceRecordDetail
+                {
+                    Date = r.AttendanceSession?.SessionDate ?? DateTime.MinValue,
+                    ClassName = r.AttendanceSession?.SchoolClass?.ClassName ?? "N/A",
+                    Status = r.Status,
+                    Remarks = r.Remarks
+                })
+                .OrderByDescending(r => r.Date)
+                .ToList();
 
             var summary = new StudentAttendanceSummaryViewModel
             {
@@ -58,6 +85,7 @@ namespace AttendanceTrackingSystem.Controllers
         }
 
         // Class Monthly Report
+        [HttpGet]
         public async Task<IActionResult> ClassReport(int? classId, int? month, int? year)
         {
             int selectedMonth = month ?? DateTime.Now.Month;
@@ -120,6 +148,7 @@ namespace AttendanceTrackingSystem.Controllers
         }
 
         // Additional Feature: PDF Printable Attendance Report
+        [HttpGet]
         public async Task<IActionResult> PrintReport(int classId, int month, int year)
         {
             var reportModel = await ClassReportDataAsync(classId, month, year);

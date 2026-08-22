@@ -1,71 +1,127 @@
 @model AttendanceTrackingSystem.Models.ViewModels.StudentAttendanceSummaryViewModel
+
 @{
-    ViewData["Title"] = "Student Attendance History";
+    ViewData["Title"] = "Attendance History";
+    var isStudent = User.IsInRole("Student");
+    var studentList = ViewData["StudentId"] as SelectList;
 }
 
-<h1>Student Attendance History</h1>
-
-<form asp-action="StudentHistory" method="get" class="row g-3 mb-4">
-    <div class="col-md-6">
-        <select name="studentId" class="form-select" asp-items="ViewBag.StudentId" onchange="this.form.submit()">
-            <option value="">-- Select Student --</option>
-        </select>
-    </div>
-</form>
-
-@if (Model != null)
-{
-    <div class="card mb-4">
-        <div class="card-body">
-            <h3>@Model.StudentName <small class="text-muted">(@Model.StudentEmail)</small></h3>
-            <hr />
-            <div class="row text-center">
-                <div class="col-md-3">
-                    <h4>@Model.TotalSessions</h4>
-                    <span class="text-muted">Total Sessions</span>
-                </div>
-                <div class="col-md-3">
-                    <h4 class="text-success">@Model.PresentCount</h4>
-                    <span class="text-muted">Present</span>
-                </div>
-                <div class="col-md-3">
-                    <h4 class="text-danger">@Model.AbsentCount</h4>
-                    <span class="text-muted">Absent</span>
-                </div>
-                <div class="col-md-3">
-                    @{
-                        var pctClass = Model.AttendancePercentage >= 80 ? "bg-success" : (Model.AttendancePercentage >= 60 ? "bg-warning text-dark" : "bg-danger");
-                    }
-                    <h4><span class="badge @pctClass">@Model.AttendancePercentage%</span></h4>
-                    <span class="text-muted">Attendance Rate</span>
+<div class="row justify-content-center py-4">
+    <div class="col-md-11">
+        <div class="card card-custom p-4 p-md-5">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">@(isStudent ? "My Attendance History" : "Student Attendance Record")</h2>
+                    <p class="text-muted small mb-0">Overview of all registered class check-ins and attendance rates</p>
                 </div>
             </div>
+
+            @* Only show student selector dropdown to Admin / Teachers *@
+            @if (!isStudent)
+            {
+                <div class="card p-3 bg-light border-0 rounded-3 mb-4">
+                    <form method="get" asp-action="StudentHistory" class="row g-2 align-items-center">
+                        <div class="col-auto">
+                            <label class="fw-semibold small text-muted">Filter By Student:</label>
+                        </div>
+                        <div class="col-md-4">
+                            <select name="studentId" asp-items="studentList" class="form-select" onchange="this.form.submit()">
+                                <option value="">-- Select Student --</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            }
+
+            @if (Model != null)
+            {
+                <!-- Summary Metrics Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="p-3 bg-primary text-white rounded-3 shadow-sm text-center">
+                            <div class="text-white-50 small fw-bold text-uppercase">Total Sessions</div>
+                            <div class="fs-3 fw-bold">@Model.TotalSessions</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-success text-white rounded-3 shadow-sm text-center">
+                            <div class="text-white-50 small fw-bold text-uppercase">Present</div>
+                            <div class="fs-3 fw-bold">@Model.PresentCount</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-warning text-dark rounded-3 shadow-sm text-center">
+                            <div class="text-black-50 small fw-bold text-uppercase">Late</div>
+                            <div class="fs-3 fw-bold">@Model.LateCount</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-danger text-white rounded-3 shadow-sm text-center">
+                            <div class="text-white-50 small fw-bold text-uppercase">Absent</div>
+                            <div class="fs-3 fw-bold">@Model.AbsentCount</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed History Table -->
+                <h5 class="fw-bold mb-3"><i class="bi bi-clock-history text-primary me-2"></i> Attendance Log</h5>
+                @if (Model.Records != null && Model.Records.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle border">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Class Name</th>
+                                    <th>Status</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var record in Model.Records)
+                                {
+                                    <tr>
+                                        <td>@record.Date.ToString("yyyy-MM-dd")</td>
+                                        <td class="fw-semibold">@record.ClassName</td>
+                                        <td>
+                                            @if (record.Status == "Present")
+                                            {
+                                                <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle me-1"></i> Present</span>
+                                            }
+                                            else if (record.Status == "Late")
+                                            {
+                                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-clock-history me-1"></i> Late</span>
+                                            }
+                                            else if (record.Status == "Absent")
+                                            {
+                                                <span class="badge bg-danger px-2 py-1"><i class="bi bi-x-circle me-1"></i> Absent</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary px-2 py-1">@record.Status</span>
+                                            }
+                                        </td>
+                                        <td class="text-muted small">@(string.IsNullOrEmpty(record.Remarks) ? "-" : record.Remarks)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-light border text-center text-muted py-4 mb-0">
+                        <i class="bi bi-info-circle me-1"></i> No individual attendance logs recorded yet for this student.
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="alert alert-light border text-center text-muted py-5 mb-0">
+                    <i class="bi bi-person-x fs-1 d-block mb-2 text-secondary"></i>
+                    No student attendance records to display.
+                </div>
+            }
         </div>
     </div>
-
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Class</th>
-                <th>Status</th>
-                <th>Remarks</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var record in Model.Records)
-            {
-                <tr>
-                    <td>@record.Date.ToString("yyyy-MM-dd")</td>
-                    <td>@record.ClassName</td>
-                    <td>
-                        <span class="badge @(record.Status == "Present" ? "bg-success" : record.Status == "Absent" ? "bg-danger" : record.Status == "Late" ? "bg-warning text-dark" : "bg-info")">
-                            @record.Status
-                        </span>
-                    </td>
-                    <td>@record.Remarks</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+</div>

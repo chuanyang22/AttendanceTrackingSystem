@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +10,7 @@ using AttendanceTrackingSystem.Services;
 
 namespace AttendanceTrackingSystem.Controllers
 {
+    [Authorize]
     public class AttendanceController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -20,6 +23,7 @@ namespace AttendanceTrackingSystem.Controllers
         }
 
         // GET: Attendance Sessions List
+        [HttpGet]
         public async Task<IActionResult> Index(int? classId)
         {
             var query = _context.AttendanceSessions
@@ -38,6 +42,8 @@ namespace AttendanceTrackingSystem.Controllers
         }
 
         // GET: Create Attendance Session
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
         public IActionResult CreateSession()
         {
             ViewData["ClassId"] = new SelectList(_context.SchoolClasses.OrderBy(c => c.ClassName), "ClassId", "ClassName");
@@ -47,9 +53,9 @@ namespace AttendanceTrackingSystem.Controllers
         // POST: Create Attendance Session
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateSession([Bind("ClassId,SessionDate,Topic")] AttendanceSession session)
         {
-
             if (ModelState.IsValid)
             {
                 _context.AttendanceSessions.Add(session);
@@ -67,19 +73,20 @@ namespace AttendanceTrackingSystem.Controllers
                     {
                         SessionId = session.SessionId,
                         StudentId = studentId,
-                        Status = "Present" // Default to Present
+                        Status = "Present"
                     });
                 }
 
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Mark), new { id = session.SessionId });
+                return RedirectToAction(nameof(Index));
             }
 
             ViewData["ClassId"] = new SelectList(_context.SchoolClasses.OrderBy(c => c.ClassName), "ClassId", "ClassName", session.ClassId);
             return View(session);
         }
 
-        // GET: Mark Attendance Grid
+        // GET: Mark Attendance Grid / Student Self-Check-in
+        [HttpGet]
         public async Task<IActionResult> Mark(int id)
         {
             var session = await _context.AttendanceSessions
@@ -90,6 +97,78 @@ namespace AttendanceTrackingSystem.Controllers
 
             if (session == null) return NotFound();
 
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            var userName = User.FindFirst(ClaimTypes.Name)?.Value ?? "Student";
+            var isStudent = User.IsInRole("Student");
+
+            // If a Student accesses Mark Attendance, guarantee they exist and are present in this session
+            if (isStudent && !string.IsNullOrEmpty(userEmail))
+            {
+                var student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower() == userEmail.ToLower());
+                if (student == null)
+                {
+                    student = new Student
+                    {
+                        Name = userName,
+                        Email = userEmail
+                    };
+                    _context.Students.Add(student);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Ensure enrolled in this class
+                var enrolled = await _context.Enrollments.AnyAsync(e => e.ClassId == session.ClassId && e.StudentId == student.StudentId);
+                if (!enrolled)
+                {
+                    _context.Enrollments.Add(new Enrollment
+                    {
+                        ClassId = session.ClassId,
+                        StudentId = student.StudentId,
+                        EnrollDate = DateTime.Now
+                    });
+                    await _context.SaveChangesAsync();
+                }
+
+                // Ensure attendance record exists for this session
+                var record = session.AttendanceRecords.FirstOrDefault(r => r.StudentId == student.StudentId);
+                if (record == null)
+                {
+                    record = new AttendanceRecord
+                    {
+                        SessionId = session.SessionId,
+                        StudentId = student.StudentId,
+                        Status = "Present",
+                        MarkedAt = DateTime.Now
+                    };
+                    _context.AttendanceRecords.Add(record);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Build single-student view model for the current student
+                var studentViewModel = new MarkAttendanceViewModel
+                {
+                    SessionId = session.SessionId,
+                    ClassName = session.SchoolClass?.ClassName ?? "N/A",
+                    TeacherName = session.SchoolClass?.TeacherName ?? "N/A",
+                    SessionDate = session.SessionDate,
+                    Topic = session.Topic,
+                    Students = new List<StudentAttendanceItem>
+                    {
+                        new StudentAttendanceItem
+                        {
+                            StudentId = student.StudentId,
+                            StudentName = student.Name,
+                            StudentEmail = student.Email,
+                            Status = record.Status,
+                            Remarks = record.Remarks
+                        }
+                    }
+                };
+
+                return View(studentViewModel);
+            }
+
+            // For Admin/Teacher: show all enrolled students
             var viewModel = new MarkAttendanceViewModel
             {
                 SessionId = session.SessionId,
@@ -122,17 +201,18 @@ namespace AttendanceTrackingSystem.Controllers
 
             if (session == null) return NotFound();
 
+            var isStudent = User.IsInRole("Student");
+
             foreach (var item in model.Students)
             {
                 var record = session.AttendanceRecords.FirstOrDefault(r => r.StudentId == item.StudentId);
                 if (record != null)
                 {
                     bool wasNotAbsent = record.Status != "Absent";
-                    record.Status = item.Status;
+                    record.Status = item.Status ?? "Present";
                     record.Remarks = item.Remarks;
                     record.MarkedAt = DateTime.Now;
 
-                    // Additional Feature: Email Notification on Absence
                     if (item.Status == "Absent" && wasNotAbsent && !string.IsNullOrEmpty(item.StudentEmail))
                     {
                         await _emailService.SendAbsenceNotificationAsync(
@@ -143,14 +223,33 @@ namespace AttendanceTrackingSystem.Controllers
                         );
                     }
                 }
+                else
+                {
+                    _context.AttendanceRecords.Add(new AttendanceRecord
+                    {
+                        SessionId = session.SessionId,
+                        StudentId = item.StudentId,
+                        Status = item.Status ?? "Present",
+                        Remarks = item.Remarks,
+                        MarkedAt = DateTime.Now
+                    });
+                }
             }
 
             await _context.SaveChangesAsync();
-            TempData["SuccessMessage"] = "Attendance updated successfully.";
+            TempData["SuccessMessage"] = "Attendance recorded successfully!";
+
+            if (isStudent)
+            {
+                var currentStudentId = model.Students.FirstOrDefault()?.StudentId;
+                return RedirectToAction("StudentHistory", "AttendanceReport", new { studentId = currentStudentId });
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
-        // Additional Feature: Display QR Code for Attendance Check-in
+        // GET: Display QR Code for Attendance Check-in
+        [HttpGet]
         public async Task<IActionResult> QRCode(int id)
         {
             var session = await _context.AttendanceSessions
@@ -161,7 +260,8 @@ namespace AttendanceTrackingSystem.Controllers
             return View(session);
         }
 
-        // Additional Feature: Quick Check-In via QR Code URL
+        // GET: Quick Check-In via QR Code URL
+        [HttpGet]
         public async Task<IActionResult> QuickCheckIn(string token, int studentId)
         {
             var session = await _context.AttendanceSessions

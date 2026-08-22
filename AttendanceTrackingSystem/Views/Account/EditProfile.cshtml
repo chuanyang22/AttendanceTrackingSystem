@@ -1,0 +1,68 @@
+﻿@model AttendanceTrackingSystem.Models.ViewModels.EditProfileViewModel
+
+@{
+    ViewData["Title"] = "Edit Profile";
+}
+
+<div class="row justify-content-center align-items-center py-4">
+    <div class="col-md-6 col-lg-5">
+        <div class="card card-custom p-4 p-md-5">
+            <div class="text-center mb-4">
+                <div class="position-relative d-inline-block mb-3">
+                    <img src="@(string.IsNullOrEmpty(Model.ExistingProfilePictureUrl) ? "https://api.dicebear.com/7.x/initials/svg?seed=" + Model.FullName : Model.ExistingProfilePictureUrl)"
+                         class="rounded-circle border border-3 border-primary shadow"
+                         style="width: 90px; height: 90px; object-fit: cover;"
+                         alt="Current Profile Photo" />
+                </div>
+                <h3 class="fw-bold tracking-tight">Edit Profile</h3>
+                <p class="text-muted small">Update your name or upload a new profile photo</p>
+            </div>
+
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success border-0 rounded-3 py-2 small shadow-sm">
+                    <i class="bi bi-check-circle-fill me-1"></i> @TempData["SuccessMessage"]
+                </div>
+            }
+
+            <form asp-action="EditProfile" method="post" enctype="multipart/form-data">
+                <input type="hidden" asp-for="UserId" />
+                <input type="hidden" asp-for="ExistingProfilePictureUrl" />
+                <input type="hidden" asp-for="Role" />
+
+                <div class="form-floating mb-3">
+                    <input asp-for="FullName" class="form-control rounded-3" placeholder="Full Name" required />
+                    <label asp-for="FullName"><i class="bi bi-person text-muted me-1"></i> Full Name</label>
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+
+                <div class="form-floating mb-3">
+                    <input asp-for="Email" class="form-control rounded-3 bg-light" readonly />
+                    <label asp-for="Email"><i class="bi bi-envelope text-muted me-1"></i> Email (Cannot be changed)</label>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-muted small fw-medium">
+                        <i class="bi bi-camera me-1"></i> Choose New Photo (PNG / JPG)
+                    </label>
+                    <input asp-for="NewProfileImage" type="file" class="form-control rounded-3" accept="image/*" />
+                    <span asp-validation-for="NewProfileImage" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn btn-gradient w-100 py-3 rounded-3 shadow-sm mb-3">
+                    Save Changes <i class="bi bi-check2-circle ms-1"></i>
+                </button>
+
+                <div class="text-center">
+                    <a asp-controller="Dashboard" asp-action="Index" class="text-decoration-none text-muted small">
+                        <i class="bi bi-arrow-left me-1"></i> Cancel & Back to Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

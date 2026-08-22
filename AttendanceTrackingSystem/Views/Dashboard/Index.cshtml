@@ -1,0 +1,125 @@
+﻿@model AttendanceTrackingSystem.Models.ViewModels.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="fw-bold">Welcome back, @Model.FullName!</h2>
+        <p class="text-muted">Role: <span class="badge bg-secondary">@Model.Role</span> | Overall Attendance Rate: <strong>@Model.OverallAttendanceRate%</strong></p>
+    </div>
+</div>
+
+<!-- Quick Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-primary text-white p-3 rounded-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0 text-uppercase">Students</h6>
+                    <h2 class="mt-2 mb-0 fw-bold">@Model.TotalStudents</h2>
+                </div>
+                <i class="bi bi-people fs-1 opacity-50"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-success text-white p-3 rounded-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0 text-uppercase">Classes</h6>
+                    <h2 class="mt-2 mb-0 fw-bold">@Model.TotalClasses</h2>
+                </div>
+                <i class="bi bi-easel fs-1 opacity-50"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-warning text-dark p-3 rounded-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0 text-uppercase">Sessions</h6>
+                    <h2 class="mt-2 mb-0 fw-bold">@Model.TotalSessions</h2>
+                </div>
+                <i class="bi bi-calendar-check fs-1 opacity-50"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-dark text-white p-3 rounded-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0 text-uppercase">System Users</h6>
+                    <h2 class="mt-2 mb-0 fw-bold">@Model.TotalUsers</h2>
+                </div>
+                <i class="bi bi-person-badge fs-1 opacity-50"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 p-3 h-100">
+            <h5 class="card-title fw-bold mb-3">Attendance Distribution</h5>
+            <div style="height: 280px; position: relative;">
+                <canvas id="attendancePieChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 p-3 h-100">
+            <h5 class="card-title fw-bold mb-3">Attendance Overview Comparison</h5>
+            <div style="height: 280px; position: relative;">
+                <canvas id="attendanceBarChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const present = @Model.PresentCount;
+        const absent = @Model.AbsentCount;
+        const late = @Model.LateCount;
+
+        // Doughnut / Pie Chart
+        new Chart(document.getElementById('attendancePieChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Present', 'Absent', 'Late'],
+                datasets: [{
+                    data: [present, absent, late],
+                    backgroundColor: ['#198754', '#dc3545', '#ffc107']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // Bar Chart
+        new Chart(document.getElementById('attendanceBarChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Present', 'Absent', 'Late'],
+                datasets: [{
+                    label: 'Total Headcount',
+                    data: [present, absent, late],
+                    backgroundColor: ['#198754', '#dc3545', '#ffc107']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    </script>
+}

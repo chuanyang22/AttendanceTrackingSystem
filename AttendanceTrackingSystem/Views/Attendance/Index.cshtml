@@ -1,59 +1,59 @@
 @model IEnumerable<AttendanceTrackingSystem.Models.AttendanceSession>
+
 @{
     ViewData["Title"] = "Attendance Sessions";
 }
 
-<h1>Attendance Sessions</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">Attendance Sessions</h2>
+    @if (User.IsInRole("Admin"))
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Create New Attendance Session
+        </a>
+    }
+</div>
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div class="card card-custom overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Class</th>
+                    <th>Date</th>
+                    <th>Topic</th>
+                    <th>Records</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var session in Model)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@(session.SchoolClass?.ClassName ?? "N/A")</td>
+                            <td>@session.SessionDate.ToString("yyyy-MM-dd")</td>
+                            <td>@session.Topic</td>
+                            <td>@(session.AttendanceRecords?.Count ?? 0)</td>
+                            <td class="text-end">
+                                <a asp-action="Mark" asp-route-id="@session.SessionId" class="btn btn-success btn-sm rounded-2 me-1">
+                                    <i class="bi bi-check2-circle me-1"></i> Mark Attendance
+                                </a>
+                                <a asp-action="QrCode" asp-route-id="@session.SessionId" class="btn btn-outline-dark btn-sm rounded-2">
+                                    <i class="bi bi-qr-code me-1"></i> QR Code
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">No attendance sessions found.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
-}
-
-<p>
-    <a asp-action="CreateSession" class="btn btn-primary">+ Create New Attendance Session</a>
-</p>
-
-<form asp-action="Index" method="get" class="row g-3 mb-4">
-    <div class="col-md-4">
-        <select name="classId" class="form-select" asp-items="ViewBag.ClassId" onchange="this.form.submit()">
-            <option value="">-- All Classes --</option>
-        </select>
-    </div>
-</form>
-
-<table class="table table-striped table-hover">
-    <thead>
-        <tr>
-            <th>Class</th>
-            <th>Date</th>
-            <th>Topic</th>
-            <th>Enrolled / Records</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.SchoolClass?.ClassName</td>
-                <td>@item.SessionDate.ToString("yyyy-MM-dd")</td>
-                <td>@(string.IsNullOrEmpty(item.Topic) ? "-" : item.Topic)</td>
-                <td>@item.AttendanceRecords.Count</td>
-                <td>
-                    <a asp-action="Mark" asp-route-id="@item.SessionId" class="btn btn-sm btn-success">Mark Attendance</a>
-                    <a asp-action="QRCode" asp-route-id="@item.SessionId" class="btn btn-sm btn-outline-dark">QR Code</a>
-                </td>
-            </tr>
-        }
-        @if (!Model.Any())
-        {
-            <tr>
-                <td colspan="5" class="text-center text-muted">No attendance sessions found.</td>
-            </tr>
-        }
-    </tbody>
-</table>
+</div>

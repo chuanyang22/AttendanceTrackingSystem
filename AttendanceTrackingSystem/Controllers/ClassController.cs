@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Data;
 using AttendanceTrackingSystem.Models;
 
 namespace AttendanceTrackingSystem.Controllers
 {
+    [Authorize]
     public class ClassController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -14,7 +16,8 @@ namespace AttendanceTrackingSystem.Controllers
             _context = context;
         }
 
-        // GET: Class
+        // GET: Class (Accessible by Admin and Student)
+        [HttpGet]
         public async Task<IActionResult> Index(string searchString)
         {
             var classes = from c in _context.SchoolClasses select c;
@@ -37,7 +40,8 @@ namespace AttendanceTrackingSystem.Controllers
             return View(result);
         }
 
-        // GET: Class/Details/5
+        // GET: Class/Details/5 (Accessible by Admin and Student)
+        [HttpGet]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
@@ -52,15 +56,18 @@ namespace AttendanceTrackingSystem.Controllers
             return View(schoolClass);
         }
 
-        // GET: Class/Create
+        // GET: Class/Create (Admin only)
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Class/Create
+        // POST: Class/Create (Admin only)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([Bind("ClassName,Schedule,TeacherName")] SchoolClass schoolClass)
         {
             if (ModelState.IsValid)
@@ -72,7 +79,9 @@ namespace AttendanceTrackingSystem.Controllers
             return View(schoolClass);
         }
 
-        // GET: Class/Edit/5
+        // GET: Class/Edit/5 (Admin only)
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -83,9 +92,10 @@ namespace AttendanceTrackingSystem.Controllers
             return View(schoolClass);
         }
 
-        // POST: Class/Edit/5
+        // POST: Class/Edit/5 (Admin only)
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int id, [Bind("ClassId,ClassName,Schedule,TeacherName")] SchoolClass schoolClass)
         {
             if (id != schoolClass.ClassId) return NotFound();
@@ -109,7 +119,9 @@ namespace AttendanceTrackingSystem.Controllers
             return View(schoolClass);
         }
 
-        // GET: Class/Delete/5
+        // GET: Class/Delete/5 (Admin only)
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -120,9 +132,10 @@ namespace AttendanceTrackingSystem.Controllers
             return View(schoolClass);
         }
 
-        // POST: Class/Delete/5
+        // POST: Class/Delete/5 (Admin only)
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var schoolClass = await _context.SchoolClasses.FindAsync(id);

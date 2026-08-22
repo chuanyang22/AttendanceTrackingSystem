@@ -1,14 +1,32 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Data;
+using AttendanceTrackingSystem.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add MVC controllers with views
 builder.Services.AddControllersWithViews();
 
+// Database Context Configuration
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<AttendanceTrackingSystem.Services.IEmailService, AttendanceTrackingSystem.Services.EmailService>();
+// Manual Cookie Authentication (Assignment Requirement: No Identity Framework)
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+    });
+
+builder.Services.AddAuthorization();
+
+// Email notification service
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 var app = builder.Build();
 
@@ -23,10 +41,13 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+// Authentication MUST come directly before Authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
+// Default route set to Login
 app.MapControllerRoute(
-    name : "default",
-    pattern: "{controller=Student}/{action=index}/{id?}");
+    name: "default",
+    pattern: "{controller=Account}/{action=Login}/{id?}");
 
 app.Run();
