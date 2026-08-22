@@ -161,9 +161,107 @@ namespace AttendanceTrackingSystem.Controllers
             };
 
             _context.Users.Add(newUser);
+
+            // Auto-sync Student profile if registering as Student
+            if (newUser.Role == "Student")
+            {
+                bool studentExists = await _context.Students.AnyAsync(s => s.Email.ToLower() == newUser.Email.ToLower());
+                if (!studentExists)
+                {
+                    _context.Students.Add(new Student
+                    {
+                        Name = newUser.FullName,
+                        Email = newUser.Email
+                    });
+                }
+            }
+
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Account registered successfully! You can now log in.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        // GET: /Account/ForgotPassword
+        [HttpGet]
+        public IActionResult ForgotPassword()
+        {
+            return View();
+        }
+
+        // POST: /Account/ForgotPassword
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
+        {
+            if (!ModelState.IsValid) return View(model);
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
+            if (user != null)
+            {
+                // Generate a unique token for reset verification
+                var resetToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray())
+                    .Replace("+", "").Replace("/", "").Replace("=", "");
+
+                TempData[$"ResetToken_{model.Email.ToLower()}"] = resetToken;
+                TempData[$"ResetExpiry_{model.Email.ToLower()}"] = DateTime.UtcNow.AddMinutes(15).ToString("o");
+
+                // Route the user to the reset page with their token
+                return RedirectToAction(nameof(ResetPassword), new { token = resetToken, email = model.Email });
+            }
+
+            TempData["SuccessMessage"] = "If an account exists with that email, a password reset link has been processed.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        // GET: /Account/ResetPassword
+        [HttpGet]
+        public IActionResult ResetPassword(string token, string email)
+        {
+            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(email))
+            {
+                TempData["ErrorMessage"] = "Invalid password reset token.";
+                return RedirectToAction(nameof(Login));
+            }
+
+            TempData.Keep();
+            return View(new ResetPasswordViewModel { Token = token, Email = email });
+        }
+
+        // POST: /Account/ResetPassword
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            TempData.Keep();
+
+            if (!ModelState.IsValid) return View(model);
+
+            var savedToken = TempData[$"ResetToken_{model.Email.ToLower()}"]?.ToString();
+            var expiryStr = TempData[$"ResetExpiry_{model.Email.ToLower()}"]?.ToString();
+
+            if (string.IsNullOrEmpty(savedToken) || savedToken != model.Token ||
+                !DateTime.TryParse(expiryStr, out var expiry) || DateTime.UtcNow > expiry)
+            {
+                ModelState.AddModelError(string.Empty, "The reset token has expired or is invalid. Please submit a new request.");
+                return View(model);
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
+            if (user == null)
+            {
+                return RedirectToAction(nameof(Login));
+            }
+
+            user.PasswordHash = PasswordHelper.HashPassword(model.NewPassword);
+            user.FailedLoginAttempts = 0;
+            user.LockoutEndUtc = null;
+            await _context.SaveChangesAsync();
+
+            TempData.Remove($"ResetToken_{model.Email.ToLower()}");
+            TempData.Remove($"ResetExpiry_{model.Email.ToLower()}");
+
+            TempData["SuccessMessage"] = "Your password has been reset successfully! You can now log in.";
             return RedirectToAction(nameof(Login));
         }
 
