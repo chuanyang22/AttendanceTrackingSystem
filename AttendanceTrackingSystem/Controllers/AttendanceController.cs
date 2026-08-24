@@ -22,6 +22,20 @@ namespace AttendanceTrackingSystem.Controllers
             _emailService = emailService;
         }
 
+        private IQueryable<SchoolClass> GetAllowedClasses()
+        {
+            var classes = _context.SchoolClasses.AsQueryable();
+            if (User.IsInRole("Teacher"))
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdStr, out int userId))
+                {
+                    classes = classes.Where(c => c.TeacherId == userId);
+                }
+            }
+            return classes;
+        }
+
         // GET: Attendance Sessions List
         [HttpGet]
         public async Task<IActionResult> Index(int? classId)
@@ -31,33 +45,57 @@ namespace AttendanceTrackingSystem.Controllers
                 .Include(s => s.AttendanceRecords)
                 .AsQueryable();
 
+            if (User.IsInRole("Teacher"))
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdStr, out int userId))
+                {
+                    query = query.Where(s => s.SchoolClass != null && s.SchoolClass.TeacherId == userId);
+                }
+            }
+            else if (User.IsInRole("Student"))
+            {
+                var email = User.FindFirstValue(ClaimTypes.Email)?.ToLower();
+                query = query.Where(s => s.SchoolClass != null && s.SchoolClass.Enrollments.Any(e => e.Student.Email.ToLower() == email));
+            }
+
             if (classId.HasValue)
             {
                 query = query.Where(s => s.ClassId == classId.Value);
             }
 
-            ViewData["ClassId"] = new SelectList(_context.SchoolClasses.OrderBy(c => c.ClassName), "ClassId", "ClassName", classId);
+            var allowedClasses = await GetAllowedClasses().OrderBy(c => c.ClassName).ToListAsync();
+            ViewData["ClassId"] = new SelectList(allowedClasses, "ClassId", "ClassName", classId);
+            
             var sessions = await query.OrderByDescending(s => s.SessionDate).ToListAsync();
             return View(sessions);
         }
 
         // GET: Create Attendance Session
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Teacher")]
         [HttpGet]
-        public IActionResult CreateSession()
+        public async Task<IActionResult> CreateSession()
         {
-            ViewData["ClassId"] = new SelectList(_context.SchoolClasses.OrderBy(c => c.ClassName), "ClassId", "ClassName");
+            var allowedClasses = await GetAllowedClasses().OrderBy(c => c.ClassName).ToListAsync();
+            ViewData["ClassId"] = new SelectList(allowedClasses, "ClassId", "ClassName");
             return View(new AttendanceSession { SessionDate = DateTime.Today });
         }
 
         // POST: Create Attendance Session
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Teacher")]
         public async Task<IActionResult> CreateSession([Bind("ClassId,SessionDate,Topic")] AttendanceSession session)
         {
             if (ModelState.IsValid)
             {
+                // Verify the user has access to this class
+                var allowedClasses = await GetAllowedClasses().Select(c => c.ClassId).ToListAsync();
+                if (!allowedClasses.Contains(session.ClassId))
+                {
+                    return Forbid();
+                }
+
                 _context.AttendanceSessions.Add(session);
                 await _context.SaveChangesAsync();
 
@@ -81,7 +119,8 @@ namespace AttendanceTrackingSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewData["ClassId"] = new SelectList(_context.SchoolClasses.OrderBy(c => c.ClassName), "ClassId", "ClassName", session.ClassId);
+            var classes = await GetAllowedClasses().OrderBy(c => c.ClassName).ToListAsync();
+            ViewData["ClassId"] = new SelectList(classes, "ClassId", "ClassName", session.ClassId);
             return View(session);
         }
 
@@ -91,6 +130,7 @@ namespace AttendanceTrackingSystem.Controllers
         {
             var session = await _context.AttendanceSessions
                 .Include(s => s.SchoolClass)
+                    .ThenInclude(c => c.Teacher)
                 .Include(s => s.AttendanceRecords)
                     .ThenInclude(r => r.Student)
                 .FirstOrDefaultAsync(s => s.SessionId == id);
@@ -100,6 +140,15 @@ namespace AttendanceTrackingSystem.Controllers
             var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
             var userName = User.FindFirst(ClaimTypes.Name)?.Value ?? "Student";
             var isStudent = User.IsInRole("Student");
+
+            if (User.IsInRole("Teacher"))
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdStr, out int userId) && session.SchoolClass?.TeacherId != userId)
+                {
+                    return Forbid();
+                }
+            }
 
             // If a Student accesses Mark Attendance, guarantee they exist and are present in this session
             if (isStudent && !string.IsNullOrEmpty(userEmail))
@@ -149,7 +198,7 @@ namespace AttendanceTrackingSystem.Controllers
                 {
                     SessionId = session.SessionId,
                     ClassName = session.SchoolClass?.ClassName ?? "N/A",
-                    TeacherName = session.SchoolClass?.TeacherName ?? "N/A",
+                    TeacherName = session.SchoolClass?.Teacher?.FullName ?? "N/A",
                     SessionDate = session.SessionDate,
                     Topic = session.Topic,
                     Students = new List<StudentAttendanceItem>
@@ -173,7 +222,7 @@ namespace AttendanceTrackingSystem.Controllers
             {
                 SessionId = session.SessionId,
                 ClassName = session.SchoolClass?.ClassName ?? "N/A",
-                TeacherName = session.SchoolClass?.TeacherName ?? "N/A",
+                TeacherName = session.SchoolClass?.Teacher?.FullName ?? "N/A",
                 SessionDate = session.SessionDate,
                 Topic = session.Topic,
                 Students = session.AttendanceRecords.Select(r => new StudentAttendanceItem
@@ -200,6 +249,15 @@ namespace AttendanceTrackingSystem.Controllers
                 .FirstOrDefaultAsync(s => s.SessionId == model.SessionId);
 
             if (session == null) return NotFound();
+
+            if (User.IsInRole("Teacher"))
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdStr, out int userId) && session.SchoolClass?.TeacherId != userId)
+                {
+                    return Forbid();
+                }
+            }
 
             var isStudent = User.IsInRole("Student");
 
@@ -257,6 +315,16 @@ namespace AttendanceTrackingSystem.Controllers
                 .FirstOrDefaultAsync(s => s.SessionId == id);
 
             if (session == null) return NotFound();
+            
+            if (User.IsInRole("Teacher"))
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdStr, out int userId) && session.SchoolClass?.TeacherId != userId)
+                {
+                    return Forbid();
+                }
+            }
+            
             return View(session);
         }
 

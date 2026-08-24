@@ -1,4 +1,4 @@
-﻿@model AttendanceTrackingSystem.Models.User
+@model AttendanceTrackingSystem.Models.User
 
 @{
     ViewData["Title"] = "Create User";
@@ -28,7 +28,8 @@
 
                     <div class="form-group mb-3">
                         <label for="password" class="form-label fw-semibold">Password</label>
-                        <input type="password" id="password" name="password" class="form-control" placeholder="Minimum 6 characters" required />
+                        <input type="password" id="password" name="password" class="form-control" placeholder="Minimum 6 characters" data-val="true" data-val-required="Password is required." data-val-minlength="Password must be at least 6 characters long." data-val-minlength-min="6" />
+                        <span class="text-danger small field-validation-valid" data-valmsg-for="password" data-valmsg-replace="true"></span>
                     </div>
 
                     <div class="form-group mb-3">
@@ -46,10 +47,7 @@
                         <input type="file" id="profileImage" name="profileImage" class="form-control" accept="image/*" />
                     </div>
 
-                    <div class="form-check mb-4">
-                        <input asp-for="IsActive" class="form-check-input" checked />
-                        <label asp-for="IsActive" class="form-check-label">Is Active Account</label>
-                    </div>
+                    <input type="hidden" name="IsActive" value="true" />
 
                     <div class="d-flex justify-content-between">
                         <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>

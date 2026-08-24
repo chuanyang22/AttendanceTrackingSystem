@@ -137,7 +137,7 @@ namespace AttendanceTrackingSystem.Controllers
             {
                 ClassId = schoolClass.ClassId,
                 ClassName = schoolClass.ClassName,
-                TeacherName = schoolClass.TeacherName,
+                TeacherName = schoolClass.Teacher?.FullName,
                 Month = selectedMonth,
                 Year = selectedYear,
                 TotalSessions = sessions.Count,
@@ -192,7 +192,7 @@ namespace AttendanceTrackingSystem.Controllers
             {
                 ClassId = schoolClass.ClassId,
                 ClassName = schoolClass.ClassName,
-                TeacherName = schoolClass.TeacherName,
+                TeacherName = schoolClass.Teacher?.FullName,
                 Month = month,
                 Year = year,
                 TotalSessions = sessions.Count,

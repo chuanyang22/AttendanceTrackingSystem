@@ -125,15 +125,33 @@
                             <!-- 1. ADMIN ONLY: Users Management & Student Profiles -->
                             @if (User.IsInRole("Admin"))
                             {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="User" asp-action="Index">
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" id="usersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="bi bi-people me-1"></i> Users
                                     </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Student" asp-action="Index">
-                                        <i class="bi bi-mortarboard me-1"></i> Students
-                                    </a>
+                                    <ul class="dropdown-menu shadow-lg p-2" aria-labelledby="usersDropdown">
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="User" asp-action="Index" asp-route-role="">
+                                                <i class="bi bi-people-fill me-2"></i> All Users
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="User" asp-action="Index" asp-route-role="Admin">
+                                                <i class="bi bi-person-badge me-2"></i> Staffs
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="User" asp-action="Index" asp-route-role="Teacher">
+                                                <i class="bi bi-person-video3 me-2"></i> Teachers
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="User" asp-action="Index" asp-route-role="Student">
+                                                <i class="bi bi-person me-2"></i> Students
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </li>
                             }
 
@@ -150,7 +168,7 @@
                             </li>
 
                             <!-- 3. REPORTS -->
-                            @if (User.IsInRole("Admin"))
+                            @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
                             {
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -170,7 +188,7 @@
                                     </ul>
                                 </li>
                             }
-                            else
+                            else if (User.IsInRole("Student"))
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" asp-controller="AttendanceReport" asp-action="StudentHistory">
@@ -209,9 +227,7 @@
                             <li class="nav-item">
                                 <a class="nav-link text-white fw-semibold" asp-controller="Account" asp-action="Login">Sign In</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="btn btn-gradient btn-sm rounded-pill px-3 py-2" asp-controller="Account" asp-action="Register">Get Started</a>
-                            </li>
+
                         }
                     </ul>
                 </div>
@@ -235,3 +251,6 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
+
+

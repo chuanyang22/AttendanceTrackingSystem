@@ -1,4 +1,4 @@
-﻿@model AttendanceTrackingSystem.Models.SchoolClass
+@model AttendanceTrackingSystem.Models.SchoolClass
 
 @{
     ViewData["Title"] = "Class Details";
@@ -33,7 +33,7 @@
                 </div>
                 <div class="col-md-4">
                     <span class="text-muted small d-block">Teacher</span>
-                    <strong class="fs-6">@Model.TeacherName</strong>
+                    <strong class="fs-6">@Model.Teacher?.FullName</strong>
                 </div>
                 <div class="col-md-4">
                     <span class="text-muted small d-block">Total Enrolled</span>

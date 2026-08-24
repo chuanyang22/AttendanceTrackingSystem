@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Data;
@@ -19,10 +19,20 @@ namespace AttendanceTrackingSystem.Controllers
             _environment = environment;
         }
 
-        // GET: /User
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? role, string? searchString)
         {
-            var users = await _context.Users.OrderByDescending(u => u.CreatedAt).ToListAsync();
+            var query = _context.Users.AsQueryable();
+            if (!string.IsNullOrEmpty(role))
+            {
+                query = query.Where(u => u.Role == role);
+                ViewData["CurrentRole"] = role;
+            }
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                query = query.Where(u => u.FullName.Contains(searchString) || u.Email.Contains(searchString));
+                ViewData["CurrentFilter"] = searchString;
+            }
+            var users = await query.OrderByDescending(u => u.CreatedAt).ToListAsync();
             return View(users);
         }
 
@@ -37,9 +47,12 @@ namespace AttendanceTrackingSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(User user, string password, IFormFile? profileImage)
         {
+            ModelState.Remove("PasswordHash");
+            ModelState.Remove("IsActive");
+
             if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
             {
-                ModelState.AddModelError("PasswordHash", "Password must be at least 6 characters long.");
+                ModelState.AddModelError("password", "Password must be at least 6 characters long.");
             }
 
             bool emailExists = await _context.Users.AnyAsync(u => u.Email.ToLower() == user.Email.ToLower());
@@ -66,11 +79,24 @@ namespace AttendanceTrackingSystem.Controllers
 
                 user.PasswordHash = PasswordHelper.HashPassword(password);
                 user.CreatedAt = DateTime.Now;
+                user.IsActive = true;
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
+                if (user.Role == "Student")
+                {
+                    var student = new Student
+                    {
+                        Name = user.FullName,
+                        Email = user.Email,
+                        Status = "Active"
+                    };
+                    _context.Students.Add(student);
+                    await _context.SaveChangesAsync();
+                }
+
                 TempData["SuccessMessage"] = "User created successfully!";
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(Index), new { role = user.Role });
             }
 
             return View(user);
@@ -92,6 +118,9 @@ namespace AttendanceTrackingSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, User model, string? newPassword, IFormFile? profileImage)
         {
+            ModelState.Remove("PasswordHash");
+            ModelState.Remove("IsActive");
+
             if (id != model.UserId) return NotFound();
 
             var existingUser = await _context.Users.FindAsync(id);
@@ -119,7 +148,7 @@ namespace AttendanceTrackingSystem.Controllers
                     }
                     else
                     {
-                        ModelState.AddModelError("", "New password must be at least 6 characters.");
+                        ModelState.AddModelError("newPassword", "New password must be at least 6 characters.");
                         return View(model);
                     }
                 }
@@ -141,7 +170,7 @@ namespace AttendanceTrackingSystem.Controllers
 
                 await _context.SaveChangesAsync();
                 TempData["SuccessMessage"] = "User updated successfully!";
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(Index), new { role = existingUser.Role });
             }
 
             return View(model);
@@ -153,13 +182,24 @@ namespace AttendanceTrackingSystem.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             var user = await _context.Users.FindAsync(id);
+            string? role = null;
             if (user != null)
             {
+                role = user.Role;
+                if (user.Role == "Student")
+                {
+                    var student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower() == user.Email.ToLower());
+                    if (student != null)
+                    {
+                        _context.Students.Remove(student);
+                    }
+                }
+
                 _context.Users.Remove(user);
                 await _context.SaveChangesAsync();
                 TempData["SuccessMessage"] = "User deleted successfully!";
             }
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { role = role });
         }
     }
 }

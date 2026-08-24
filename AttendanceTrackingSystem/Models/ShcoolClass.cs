@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace AttendanceTrackingSystem.Models
 {
@@ -15,8 +15,8 @@ namespace AttendanceTrackingSystem.Models
         public string? Schedule { get; set; }
 
         [Required(ErrorMessage = "Please assign a teacher to this class.")]
-        [StringLength(100)]
-        public string TeacherName { get; set; } = string.Empty;
+        public int TeacherId { get; set; }
+        public User? Teacher { get; set; }
 
         public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
         public ICollection<AttendanceSession> AttendanceSessions { get; set; } = new List<AttendanceSession>();

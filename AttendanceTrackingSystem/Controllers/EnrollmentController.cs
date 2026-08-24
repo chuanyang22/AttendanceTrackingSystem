@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Data;
@@ -6,6 +7,7 @@ using AttendanceTrackingSystem.Models;
 
 namespace AttendanceTrackingSystem.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class EnrollmentController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -124,3 +126,5 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
+

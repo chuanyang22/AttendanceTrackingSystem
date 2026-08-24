@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Data;
 using AttendanceTrackingSystem.Models;
@@ -16,16 +18,39 @@ namespace AttendanceTrackingSystem.Controllers
             _context = context;
         }
 
-        // GET: Class (Accessible by Admin and Student)
+        private void PopulateTeachersDropDownList(object? selectedTeacher = null)
+        {
+            var teachersQuery = from u in _context.Users
+                                where u.Role == "Teacher"
+                                orderby u.FullName
+                                select u;
+            ViewBag.TeacherId = new SelectList(teachersQuery.AsNoTracking(), "UserId", "FullName", selectedTeacher);
+        }
+
+        // GET: Class
         [HttpGet]
         public async Task<IActionResult> Index(string searchString)
         {
-            var classes = from c in _context.SchoolClasses select c;
+            var classes = _context.SchoolClasses.Include(c => c.Teacher).AsQueryable();
+
+            if (User.IsInRole("Teacher"))
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdStr, out int userId))
+                {
+                    classes = classes.Where(c => c.TeacherId == userId);
+                }
+            }
+            else if (User.IsInRole("Student"))
+            {
+                var email = User.FindFirstValue(ClaimTypes.Email)?.ToLower();
+                classes = classes.Where(c => c.Enrollments.Any(e => e.Student.Email.ToLower() == email));
+            }
 
             if (!string.IsNullOrEmpty(searchString))
             {
                 classes = classes.Where(c => c.ClassName.Contains(searchString)
-                                           || c.TeacherName.Contains(searchString));
+                                           || (c.Teacher != null && c.Teacher.FullName.Contains(searchString)));
             }
 
             ViewData["CurrentFilter"] = searchString;
@@ -40,18 +65,29 @@ namespace AttendanceTrackingSystem.Controllers
             return View(result);
         }
 
-        // GET: Class/Details/5 (Accessible by Admin and Student)
+        // GET: Class/Details/5
         [HttpGet]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null) return NotFound();
 
             var schoolClass = await _context.SchoolClasses
+                .Include(c => c.Teacher)
                 .Include(c => c.Enrollments)
                     .ThenInclude(e => e.Student)
                 .FirstOrDefaultAsync(c => c.ClassId == id);
 
             if (schoolClass == null) return NotFound();
+
+            // Additional security: if Teacher, only view if it's their class
+            if (User.IsInRole("Teacher"))
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdStr, out int userId) && schoolClass.TeacherId != userId)
+                {
+                    return Forbid();
+                }
+            }
 
             return View(schoolClass);
         }
@@ -61,6 +97,7 @@ namespace AttendanceTrackingSystem.Controllers
         [HttpGet]
         public IActionResult Create()
         {
+            PopulateTeachersDropDownList();
             return View();
         }
 
@@ -68,7 +105,7 @@ namespace AttendanceTrackingSystem.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Create([Bind("ClassName,Schedule,TeacherName")] SchoolClass schoolClass)
+        public async Task<IActionResult> Create([Bind("ClassName,Schedule,TeacherId")] SchoolClass schoolClass)
         {
             if (ModelState.IsValid)
             {
@@ -76,6 +113,7 @@ namespace AttendanceTrackingSystem.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
+            PopulateTeachersDropDownList(schoolClass.TeacherId);
             return View(schoolClass);
         }
 
@@ -89,6 +127,7 @@ namespace AttendanceTrackingSystem.Controllers
             var schoolClass = await _context.SchoolClasses.FindAsync(id);
             if (schoolClass == null) return NotFound();
 
+            PopulateTeachersDropDownList(schoolClass.TeacherId);
             return View(schoolClass);
         }
 
@@ -96,7 +135,7 @@ namespace AttendanceTrackingSystem.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Edit(int id, [Bind("ClassId,ClassName,Schedule,TeacherName")] SchoolClass schoolClass)
+        public async Task<IActionResult> Edit(int id, [Bind("ClassId,ClassName,Schedule,TeacherId")] SchoolClass schoolClass)
         {
             if (id != schoolClass.ClassId) return NotFound();
 
@@ -116,6 +155,7 @@ namespace AttendanceTrackingSystem.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
+            PopulateTeachersDropDownList(schoolClass.TeacherId);
             return View(schoolClass);
         }
 
@@ -126,7 +166,9 @@ namespace AttendanceTrackingSystem.Controllers
         {
             if (id == null) return NotFound();
 
-            var schoolClass = await _context.SchoolClasses.FirstOrDefaultAsync(c => c.ClassId == id);
+            var schoolClass = await _context.SchoolClasses
+                .Include(c => c.Teacher)
+                .FirstOrDefaultAsync(c => c.ClassId == id);
             if (schoolClass == null) return NotFound();
 
             return View(schoolClass);

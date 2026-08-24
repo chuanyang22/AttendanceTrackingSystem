@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Data;
 using AttendanceTrackingSystem.Models;
 
 namespace AttendanceTrackingSystem.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class StudentController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -181,6 +183,12 @@ namespace AttendanceTrackingSystem.Controllers
             var student = await _context.Students.FindAsync(id);
             if (student != null)
             {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == student.Email.ToLower());
+                if (user != null)
+                {
+                    _context.Users.Remove(user);
+                }
+
                 _context.Students.Remove(student);
                 await _context.SaveChangesAsync();
             }
@@ -188,3 +196,5 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
+

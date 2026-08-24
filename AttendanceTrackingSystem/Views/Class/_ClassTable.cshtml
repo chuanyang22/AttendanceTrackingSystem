@@ -1,4 +1,4 @@
-﻿@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
+@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
 
 <table class="table table-striped">
     <thead>
@@ -15,7 +15,7 @@
             <tr>
                 <td>@item.ClassName</td>
                 <td>@item.Schedule</td>
-                <td>@item.TeacherName</td>
+                <td>@item.Teacher?.FullName</td>
                 <td>
                     <a asp-action="Details" asp-route-id="@item.ClassId" class="btn btn-sm btn-outline-primary">Details</a>
                     <a asp-action="Edit" asp-route-id="@item.ClassId" class="btn btn-sm btn-outline-secondary">Edit</a>

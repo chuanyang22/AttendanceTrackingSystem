@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -111,76 +111,6 @@ namespace AttendanceTrackingSystem.Controllers
             return RedirectToAction("Index", "Dashboard");
         }
 
-        // GET: /Account/Register
-        [HttpGet]
-        public IActionResult Register()
-        {
-            return View();
-        }
-
-        // POST: /Account/Register (Includes Profile Photo Upload)
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegisterViewModel model)
-        {
-            if (!ModelState.IsValid) return View(model);
-
-            bool emailExists = await _context.Users.AnyAsync(u => u.Email.ToLower() == model.Email.ToLower());
-            if (emailExists)
-            {
-                ModelState.AddModelError("Email", "This email address is already registered.");
-                return View(model);
-            }
-
-            string? profilePicPath = null;
-            var photoToUpload = model.ProfileImage ?? model.ProfilePicture;
-            if (photoToUpload != null && photoToUpload.Length > 0)
-            {
-                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "avatars");
-                Directory.CreateDirectory(uploadsFolder);
-
-                var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(photoToUpload.FileName)}";
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
-                {
-                    await photoToUpload.CopyToAsync(fileStream);
-                }
-
-                profilePicPath = $"/uploads/avatars/{uniqueFileName}";
-            }
-
-            var newUser = new User
-            {
-                FullName = model.FullName,
-                Email = model.Email,
-                PasswordHash = PasswordHelper.HashPassword(model.Password),
-                Role = model.Role,
-                ProfilePictureUrl = profilePicPath,
-                CreatedAt = DateTime.Now
-            };
-
-            _context.Users.Add(newUser);
-
-            // Auto-sync Student profile if registering as Student
-            if (newUser.Role == "Student")
-            {
-                bool studentExists = await _context.Students.AnyAsync(s => s.Email.ToLower() == newUser.Email.ToLower());
-                if (!studentExists)
-                {
-                    _context.Students.Add(new Student
-                    {
-                        Name = newUser.FullName,
-                        Email = newUser.Email
-                    });
-                }
-            }
-
-            await _context.SaveChangesAsync();
-
-            TempData["SuccessMessage"] = "Account registered successfully! You can now log in.";
-            return RedirectToAction(nameof(Login));
-        }
 
         // GET: /Account/ForgotPassword
         [HttpGet]

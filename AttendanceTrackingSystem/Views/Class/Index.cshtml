@@ -1,4 +1,4 @@
-﻿@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
+@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
 
 @{
     ViewData["Title"] = "Classes";
@@ -33,7 +33,7 @@
                         <tr>
                             <td class="fw-semibold">@item.ClassName</td>
                             <td>@item.Schedule</td>
-                            <td>@item.TeacherName</td>
+                            <td>@item.Teacher?.FullName</td>
                             <td class="text-end">
                                 <a asp-action="Details" asp-route-id="@item.ClassId" class="btn btn-outline-primary btn-sm rounded-2 me-1">Details</a>
                                 @if (User.IsInRole("Admin"))
