@@ -1,10 +1,9 @@
-﻿@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
+@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
 
 <table class="table table-striped">
     <thead>
         <tr>
-            <th>Class Name</th>
-            
+            <th>Class</th>
             <th>Schedule</th>
             <th>Teacher</th>
             <th></th>
@@ -16,7 +15,32 @@
             <tr>
                 <td>@item.ClassName</td>
                 
-                <td>@item.Schedule</td>
+                @{
+                    string formattedSchedule = "Not Set";
+                    if (!string.IsNullOrEmpty(item.Schedule))
+                    {
+                        var parts = item.Schedule.Split(' ');
+                        if (parts.Length > 1)
+                        {
+                            var day = parts[0];
+                            var timePart = string.Join(" ", parts.Skip(1));
+                            var times = timePart.Split('-');
+                            if (times.Length == 2 && DateTime.TryParse(times[0], out DateTime start) && DateTime.TryParse(times[1], out DateTime end))
+                            {
+                                formattedSchedule = $"{start:h:mmtt} - {end:h:mmtt} ({day})";
+                            }
+                            else
+                            {
+                                formattedSchedule = $"{timePart} ({day})";
+                            }
+                        }
+                        else
+                        {
+                            formattedSchedule = item.Schedule;
+                        }
+                    }
+                }
+                <td>@formattedSchedule</td>
                 <td>@item.Teacher?.FullName</td>
                 <td>
                     <a asp-action="Details" asp-route-id="@item.ClassId" class="btn btn-sm btn-outline-primary">Details</a>

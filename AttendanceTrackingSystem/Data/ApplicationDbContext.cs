@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Models;
 
 namespace AttendanceTrackingSystem.Data
@@ -15,6 +15,7 @@ namespace AttendanceTrackingSystem.Data
         public DbSet<SchoolClass> SchoolClasses { get; set; }
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<AttendanceSession> AttendanceSessions { get; set; }
+        public DbSet<PublicHoliday> PublicHolidays { get; set; }
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

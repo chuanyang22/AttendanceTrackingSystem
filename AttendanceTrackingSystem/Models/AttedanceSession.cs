@@ -27,6 +27,11 @@ namespace AttendanceTrackingSystem.Models
         [StringLength(20)]
         public string SessionType { get; set; } = "Lecture";
 
+        public bool IsReplacement { get; set; } = false;
+
+        public TimeSpan? StartTime { get; set; }
+        public TimeSpan? EndTime { get; set; }
+
         [StringLength(50)]
         public string QRCodeToken { get; set; } = new Random().Next(100000, 999999).ToString();
 

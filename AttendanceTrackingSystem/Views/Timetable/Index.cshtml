@@ -1,0 +1,147 @@
+@model AttendanceTrackingSystem.ViewModels.TimetableViewModel
+@{
+    ViewData["Title"] = "Timetable";
+    var hours = Enumerable.Range(8, 14).ToList(); // 8 AM to 9 PM
+}
+
+<style>
+.timetable-grid {
+    display: grid;
+    grid-template-columns: 120px repeat(14, 1fr);
+    gap: 1px;
+    background: #dee2e6;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.tt-cell {
+    background: white;
+    min-height: 100px;
+    position: relative;
+}
+.tt-header {
+    background: #f8f9fa;
+    text-align: center;
+    padding: 10px 5px;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+}
+.tt-day {
+    background: #e9ecef;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.9rem;
+    text-align: center;
+}
+.tt-event {
+    margin: 2px;
+    border-radius: 4px;
+    color: white;
+    padding: 8px;
+    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.tt-event.bg-regular { background-color: #198754; }
+.tt-event.bg-replacement { background-color: #ffca2c; color: #000; }
+.tt-event.bg-cancelled { background-color: #dc3545; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0 text-primary">Timetable</h2>
+    <div class="d-flex gap-2 align-items-center">
+        <a asp-action="Index" asp-route-weekDate="@Model.WeekStart.AddDays(-7).ToString("yyyy-MM-dd")" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-chevron-left"></i> Prev Week
+        </a>
+        <span class="fw-bold mx-2">@Model.WeekStart.ToString("dd MMM yyyy") - @Model.WeekEnd.ToString("dd MMM yyyy")</span>
+        <a asp-action="Index" asp-route-weekDate="@Model.WeekStart.AddDays(7).ToString("yyyy-MM-dd")" class="btn btn-outline-secondary btn-sm">
+            Next Week <i class="bi bi-chevron-right"></i>
+        </a>
+    </div>
+</div>
+
+<div class="timetable-grid mb-5">
+    <!-- Header Row -->
+    <div class="tt-header" style="background: #e9ecef; grid-row: 1; grid-column: 1;">Day / Time</div>
+    @foreach(var h in hours)
+    {
+        <div class="tt-header" style="grid-row: 1; grid-column: @(hours.IndexOf(h) + 2);">
+            @(h > 12 ? (h - 12).ToString("D2") : h.ToString("D2")):00 <br />
+            <small class="text-muted">@(h >= 12 ? "PM" : "AM")</small>
+        </div>
+    }
+
+    <!-- Grid Rows -->
+    @{
+        var days = Enumerable.Range(0, 7).Select(i => Model.WeekStart.AddDays(i)).ToList();
+    }
+    
+    @foreach(var day in days)
+    {
+        var holiday = Model.Holidays.FirstOrDefault(h => h.Date.Date == day.Date);
+        int rowIndex = (int)(day.Date - Model.WeekStart.Date).TotalDays + 2;
+        
+        <div class="tt-day" style="grid-column: 1; grid-row: @rowIndex;">
+            <span class="fw-bold">@day.ToString("ddd")</span>
+            <span class="small text-muted">@day.ToString("yyyy-MM-dd")</span>
+            @if(holiday != null)
+            {
+                <span class="text-danger small mt-1 fw-semibold">@holiday.HolidayName</span>
+            }
+        </div>
+        
+        <!-- Empty background cells for the row -->
+        @foreach(var h in hours)
+        {
+            <div class="tt-cell" style="grid-column: @(hours.IndexOf(h) + 2); grid-row: @rowIndex;"></div>
+        }
+    }
+    
+    <!-- Render Events -->
+    @foreach(var slot in Model.Slots)
+    {
+        int dayIndex = (int)(slot.Date.Date - Model.WeekStart.Date).TotalDays;
+        int rowStart = dayIndex + 2; // +1 for 1-indexed grid, +1 to skip header row
+        
+        int colStart = slot.StartTime.Hours - 8 + 2; // +1 for 1-indexed grid, +1 to skip day column
+        int colEnd = slot.EndTime.Hours - 8 + 2;
+        
+        if (colStart < 2) colStart = 2; // bound checks
+        if (colEnd > 16) colEnd = 16;
+        
+        string bgClass = "bg-regular";
+        string statusText = "";
+        if (slot.Status == "Replacement") 
+        {
+            bgClass = "bg-replacement";
+            statusText = $"(Replaced class for {slot.Date:yyyy-MM-dd})";
+        }
+        else if (slot.Status == "Cancelled")
+        {
+            bgClass = "bg-cancelled";
+            statusText = "(Cancelled)";
+        }
+
+        string timeStr = $"{(slot.StartTime.Hours > 12 ? slot.StartTime.Hours-12 : slot.StartTime.Hours):00}:{(slot.StartTime.Minutes):00} {(slot.StartTime.Hours >= 12 ? "PM" : "AM")} - {(slot.EndTime.Hours > 12 ? slot.EndTime.Hours-12 : slot.EndTime.Hours):00}:{(slot.EndTime.Minutes):00} {(slot.EndTime.Hours >= 12 ? "PM" : "AM")}";
+
+        <div class="tt-event @bgClass" style="grid-row: @rowStart; grid-column: @colStart / @colEnd;">
+            <strong class="d-block mb-1">@slot.ClassName (@slot.SessionType)</strong>
+            <span class="d-block">@slot.TeacherName</span>
+            <span class="d-block">@timeStr</span>
+            @if(!string.IsNullOrEmpty(statusText))
+            {
+                <span class="d-block small mt-1">@statusText</span>
+            }
+        </div>
+    }
+</div>
+

@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -85,7 +85,7 @@ namespace AttendanceTrackingSystem.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Teacher")]
-        public async Task<IActionResult> CreateSession([Bind("ClassId,SessionDate,SessionType,Topic")] AttendanceSession session)
+        public async Task<IActionResult> CreateSession([Bind("ClassId,SessionDate,SessionType,Topic,IsReplacement,StartTime,EndTime")] AttendanceSession session)
         {
             if (ModelState.IsValid)
             {
@@ -94,6 +94,107 @@ namespace AttendanceTrackingSystem.Controllers
                 if (!allowedClasses.Contains(session.ClassId))
                 {
                     return Forbid();
+                }
+
+                // Populate regular session times from Schedule if not provided
+                if (!session.IsReplacement && (!session.StartTime.HasValue || !session.EndTime.HasValue))
+                {
+                    var schoolClassForTime = await _context.SchoolClasses.FindAsync(session.ClassId);
+                    if (schoolClassForTime != null && !string.IsNullOrEmpty(schoolClassForTime.Schedule))
+                    {
+                        var parts = schoolClassForTime.Schedule.Split(' ');
+                        if (parts.Length > 1) 
+                        {
+                            var timeParts = parts[1].Split('-');
+                            if (timeParts.Length == 2 && TimeSpan.TryParse(timeParts[0], out var st) && TimeSpan.TryParse(timeParts[1], out var et))
+                            {
+                                session.StartTime = st;
+                                session.EndTime = et;
+                            }
+                        }
+                    }
+                }
+
+                if (!session.StartTime.HasValue || !session.EndTime.HasValue)
+                {
+                    TempData["ErrorMessage"] = "Cannot create session: Could not determine Start Time and End Time.";
+                    return RedirectToAction("Details", "Class", new { id = session.ClassId }, "sessions-table");
+                }
+
+                // Validation 1: Public Holiday
+                var isHoliday = await _context.PublicHolidays.AnyAsync(h => h.Date.Date == session.SessionDate.Date);
+                if (isHoliday)
+                {
+                    TempData["ErrorMessage"] = "Cannot create session: This date falls on a Public Holiday.";
+                    return RedirectToAction("Details", "Class", new { id = session.ClassId }, "sessions-table");
+                }
+
+                // Validation 2: Time clash for this specific class
+                var classClash = await _context.AttendanceSessions
+                    .AnyAsync(s => s.ClassId == session.ClassId 
+                                && s.SessionDate.Date == session.SessionDate.Date 
+                                && s.StartTime < session.EndTime 
+                                && s.EndTime > session.StartTime);
+                                
+                if (classClash)
+                {
+                    TempData["ErrorMessage"] = "Cannot create session: The selected time clashes with an existing session for this class.";
+                    return RedirectToAction("Details", "Class", new { id = session.ClassId }, "sessions-table");
+                }
+                
+                // Validation 3: Time clash for the teacher of this class
+                var schoolClass = await _context.SchoolClasses.FindAsync(session.ClassId);
+                var teacherId = schoolClass?.TeacherId;
+                
+                if (teacherId.HasValue)
+                {
+                    var teacherClash = await _context.AttendanceSessions
+                        .Include(s => s.SchoolClass)
+                        .AnyAsync(s => s.SchoolClass != null && s.SchoolClass.TeacherId == teacherId.Value 
+                                    && s.SessionDate.Date == session.SessionDate.Date
+                                    && s.StartTime < session.EndTime 
+                                    && s.EndTime > session.StartTime);
+                    
+                    if (teacherClash)
+                    {
+                        TempData["ErrorMessage"] = "Cannot create session: The teacher is already teaching another class during this time slot.";
+                        return RedirectToAction("Details", "Class", new { id = session.ClassId }, "sessions-table");
+                    }
+
+                    // Check against regular class schedules for this teacher
+                    string dayOfWeek = session.SessionDate.ToString("dddd");
+                    var teacherClasses = await _context.SchoolClasses.Where(c => c.TeacherId == teacherId.Value).ToListAsync();
+                    
+                    foreach(var tc in teacherClasses.Where(c => c.ClassId != session.ClassId))
+                    {
+                        if (string.IsNullOrEmpty(tc.Schedule)) continue;
+                        var parts = tc.Schedule.Split(' ');
+                        if (parts.Length == 2 && parts[0] == dayOfWeek)
+                        {
+                            var timeParts = parts[1].Split('-');
+                            if (timeParts.Length == 2 && TimeSpan.TryParse(timeParts[0], out TimeSpan regStart) && TimeSpan.TryParse(timeParts[1], out TimeSpan regEnd))
+                            {
+                                if (regStart < session.EndTime && regEnd > session.StartTime)
+                                {
+                                    TempData["ErrorMessage"] = $"Cannot create session: The teacher has a regular class ({tc.ClassName}) scheduled at this time.";
+                                    return RedirectToAction("Details", "Class", new { id = session.ClassId }, "sessions-table");
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Validation 4: Valid business hours
+                if (session.StartTime >= session.EndTime)
+                {
+                    TempData["ErrorMessage"] = "Cannot create session: Start time must be before end time.";
+                    return RedirectToAction("Details", "Class", new { id = session.ClassId }, "sessions-table");
+                }
+                
+                if (session.StartTime.Value.Hours < 8 || session.EndTime.Value.Hours > 21 || (session.EndTime.Value.Hours == 21 && session.EndTime.Value.Minutes > 0))
+                {
+                    TempData["ErrorMessage"] = "Cannot create session: Time must be within operating hours (08:00 AM - 09:00 PM).";
+                    return RedirectToAction("Details", "Class", new { id = session.ClassId }, "sessions-table");
                 }
 
                 session.QRCodeToken = new Random().Next(100000, 999999).ToString();
@@ -118,7 +219,7 @@ namespace AttendanceTrackingSystem.Controllers
                 }
 
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction("Details", "Class", new { id = session.ClassId }, "sessions-table");
             }
 
             var classes = await GetAllowedClasses().OrderBy(c => c.ClassName).ToListAsync();
@@ -242,7 +343,7 @@ namespace AttendanceTrackingSystem.Controllers
                 return RedirectToAction("StudentHistory", "AttendanceReport", new { studentId = currentStudentId });
             }
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction("Details", "Class", new { id = session.ClassId }, "sessions-table");
         }
 
         // GET: Display QR Code for Attendance Check-in
@@ -327,6 +428,37 @@ namespace AttendanceTrackingSystem.Controllers
 
             return RedirectToAction("StudentHistory", "AttendanceReport", new { studentId = student.StudentId });
         }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteSession(int sessionId)
+        {
+            var session = await _context.AttendanceSessions
+                .Include(s => s.AttendanceRecords)
+                .FirstOrDefaultAsync(s => s.SessionId == sessionId);
+
+            if (session == null)
+            {
+                return NotFound();
+            }
+
+            int classId = session.ClassId;
+
+            _context.AttendanceRecords.RemoveRange(session.AttendanceRecords);
+            _context.AttendanceSessions.Remove(session);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Session deleted successfully.";
+            return RedirectToAction("Details", "Class", new { id = classId }, "sessions-table");
+        }
     }
 }
+
+
+
+
+
+
+
 
