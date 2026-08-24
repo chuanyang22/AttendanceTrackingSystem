@@ -1,4 +1,4 @@
-@model AttendanceTrackingSystem.Models.SchoolClass
+﻿@model AttendanceTrackingSystem.Models.SchoolClass
 
 @{
     ViewData["Title"] = "Add Class";
@@ -14,6 +14,8 @@
         <input asp-for="ClassName" class="form-control" />
         <span asp-validation-for="ClassName" class="text-danger"></span>
     </div>
+
+    
 
     <div class="form-group mb-3">
         <label asp-for="Schedule">Schedule</label>
@@ -79,8 +81,59 @@
                 document.getElementById('Schedule').value = '';
             }
         }
+
+        function generateEndTimes() {
+            var startStr = document.getElementById('scheduleStart').value;
+            if (!startStr) return;
+
+            var startParts = startStr.split(':');
+            var startMins = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+            
+            var endSelect = document.getElementById('scheduleEnd');
+            var currentEnd = endSelect.value;
+            endSelect.innerHTML = '';
+            
+            // Min 1 hour, max 4 hours
+            var minEndMins = startMins + 60;
+            var maxEndMins = startMins + 240;
+            
+            // Limit to 21:00 (9 PM) maximum
+            if (maxEndMins > 21 * 60) maxEndMins = 21 * 60;
+
+            for (var m = minEndMins; m <= maxEndMins; m += 30) {
+                var h = Math.floor(m / 60);
+                var mins = m % 60;
+                
+                var hStr = (h < 10 ? '0' : '') + h;
+                var mStr = (mins === 0 ? '00' : '30');
+                var val = hStr + ':' + mStr;
+                
+                var displayH = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+                var ampm = h >= 12 && h < 24 ? 'PM' : 'AM';
+                var display = displayH + ':' + mStr + ' ' + ampm;
+                
+                var option = document.createElement('option');
+                option.value = val;
+                option.text = display;
+                endSelect.appendChild(option);
+            }
+            
+            var validValues = Array.from(endSelect.options).map(o => o.value);
+            if (validValues.includes(currentEnd)) {
+                endSelect.value = currentEnd;
+            } else if (endSelect.options.length > 0) {
+                endSelect.selectedIndex = 0;
+            }
+            
+            updateSchedule();
+        }
+
         document.getElementById('scheduleDay').addEventListener('change', updateSchedule);
-        document.getElementById('scheduleStart').addEventListener('change', updateSchedule);
+        document.getElementById('scheduleStart').addEventListener('change', generateEndTimes);
         document.getElementById('scheduleEnd').addEventListener('change', updateSchedule);
+
+        // Run once on load to restrict end times correctly based on initial start time
+        generateEndTimes();
     </script>
 }
+

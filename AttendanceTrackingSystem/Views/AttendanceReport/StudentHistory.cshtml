@@ -1,4 +1,4 @@
-@model AttendanceTrackingSystem.Models.ViewModels.StudentAttendanceSummaryViewModel
+﻿@model AttendanceTrackingSystem.Models.ViewModels.StudentAttendanceSummaryViewModel
 
 @{
     ViewData["Title"] = "Attendance History";
@@ -51,8 +51,8 @@
                     </div>
                     <div class="col-md-3">
                         <div class="p-3 bg-warning text-dark rounded-3 shadow-sm text-center">
-                            <div class="text-black-50 small fw-bold text-uppercase">Late</div>
-                            <div class="fs-3 fw-bold">@Model.LateCount</div>
+                            <div class="text-black-50 small fw-bold text-uppercase">Excused</div>
+                            <div class="fs-3 fw-bold">@Model.ExcusedCount</div>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -88,9 +88,9 @@
                                             {
                                                 <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle me-1"></i> Present</span>
                                             }
-                                            else if (record.Status == "Late")
+                                            else if (record.Status == "Excused")
                                             {
-                                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-clock-history me-1"></i> Late</span>
+                                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-exclamation-circle me-1"></i> Excused</span>
                                             }
                                             else if (record.Status == "Absent")
                                             {

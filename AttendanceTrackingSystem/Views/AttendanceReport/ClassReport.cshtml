@@ -1,4 +1,4 @@
-@model AttendanceTrackingSystem.Models.ViewModels.ClassAttendanceReportViewModel
+﻿@model AttendanceTrackingSystem.Models.ViewModels.ClassAttendanceReportViewModel
 @{
     ViewData["Title"] = "Class Attendance Report";
 }
@@ -31,7 +31,7 @@
 {
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>Class: @Model.ClassName (Teacher: @Model.TeacherName)</h3>
-        <a asp-action="PrintReport" asp-route-classId="@Model.ClassId" asp-route-month="@Model.Month" asp-route-year="@Model.Year" target="_blank" class="btn btn-outline-secondary">🖨️ Printable PDF View</a>
+        <a asp-action="PrintReport" asp-route-classId="@Model.ClassId" asp-route-month="@Model.Month" asp-route-year="@Model.Year" target="_blank" class="btn btn-outline-secondary">ðŸ–¨ï¸ Printable PDF View</a>
     </div>
 
     <table class="table table-bordered table-striped align-middle">
@@ -40,7 +40,7 @@
                 <th>Student Name</th>
                 <th>Total Sessions</th>
                 <th>Present</th>
-                <th>Late</th>
+                <th>Excused</th>
                 <th>Absent</th>
                 <th>Attendance Rate (%)</th>
             </tr>
@@ -52,7 +52,7 @@
                     <td>@s.StudentName</td>
                     <td>@s.TotalSessions</td>
                     <td><span class="text-success fw-bold">@s.PresentCount</span></td>
-                    <td><span class="text-warning fw-bold">@s.LateCount</span></td>
+                    <td><span class="text-warning fw-bold">@s.ExcusedCount</span></td>
                     <td><span class="text-danger fw-bold">@s.AbsentCount</span></td>
                     <td>
                         @{

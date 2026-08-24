@@ -23,8 +23,12 @@ namespace AttendanceTrackingSystem.Models
         [Display(Name = "Topic / Remarks")]
         public string? Topic { get; set; }
 
+        [Required]
+        [StringLength(20)]
+        public string SessionType { get; set; } = "Lecture";
+
         [StringLength(50)]
-        public string QRCodeToken { get; set; } = Guid.NewGuid().ToString("N").Substring(0, 10);
+        public string QRCodeToken { get; set; } = new Random().Next(100000, 999999).ToString();
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 

@@ -22,7 +22,7 @@ namespace AttendanceTrackingSystem.Models
 
         [Required]
         [StringLength(20)]
-        public string Status { get; set; } = "Present"; // Present, Absent, Late, Excused
+        public string Status { get; set; } = "Present"; // Present, Absent, Excused
 
         [StringLength(255)]
         public string? Remarks { get; set; }

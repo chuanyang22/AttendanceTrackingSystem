@@ -85,7 +85,7 @@ namespace AttendanceTrackingSystem.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Teacher")]
-        public async Task<IActionResult> CreateSession([Bind("ClassId,SessionDate,Topic")] AttendanceSession session)
+        public async Task<IActionResult> CreateSession([Bind("ClassId,SessionDate,SessionType,Topic")] AttendanceSession session)
         {
             if (ModelState.IsValid)
             {
@@ -96,6 +96,8 @@ namespace AttendanceTrackingSystem.Controllers
                     return Forbid();
                 }
 
+                session.QRCodeToken = new Random().Next(100000, 999999).ToString();
+                
                 _context.AttendanceSessions.Add(session);
                 await _context.SaveChangesAsync();
 
@@ -111,7 +113,7 @@ namespace AttendanceTrackingSystem.Controllers
                     {
                         SessionId = session.SessionId,
                         StudentId = studentId,
-                        Status = "Present"
+                        Status = "Pending"
                     });
                 }
 
@@ -124,8 +126,9 @@ namespace AttendanceTrackingSystem.Controllers
             return View(session);
         }
 
-        // GET: Mark Attendance Grid / Student Self-Check-in
+        // GET: Mark Attendance Grid
         [HttpGet]
+        [Authorize(Roles = "Admin,Teacher")]
         public async Task<IActionResult> Mark(int id)
         {
             var session = await _context.AttendanceSessions
@@ -150,72 +153,7 @@ namespace AttendanceTrackingSystem.Controllers
                 }
             }
 
-            // If a Student accesses Mark Attendance, guarantee they exist and are present in this session
-            if (isStudent && !string.IsNullOrEmpty(userEmail))
-            {
-                var student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower() == userEmail.ToLower());
-                if (student == null)
-                {
-                    student = new Student
-                    {
-                        Name = userName,
-                        Email = userEmail
-                    };
-                    _context.Students.Add(student);
-                    await _context.SaveChangesAsync();
-                }
-
-                // Ensure enrolled in this class
-                var enrolled = await _context.Enrollments.AnyAsync(e => e.ClassId == session.ClassId && e.StudentId == student.StudentId);
-                if (!enrolled)
-                {
-                    _context.Enrollments.Add(new Enrollment
-                    {
-                        ClassId = session.ClassId,
-                        StudentId = student.StudentId,
-                        EnrollDate = DateTime.Now
-                    });
-                    await _context.SaveChangesAsync();
-                }
-
-                // Ensure attendance record exists for this session
-                var record = session.AttendanceRecords.FirstOrDefault(r => r.StudentId == student.StudentId);
-                if (record == null)
-                {
-                    record = new AttendanceRecord
-                    {
-                        SessionId = session.SessionId,
-                        StudentId = student.StudentId,
-                        Status = "Present",
-                        MarkedAt = DateTime.Now
-                    };
-                    _context.AttendanceRecords.Add(record);
-                    await _context.SaveChangesAsync();
-                }
-
-                // Build single-student view model for the current student
-                var studentViewModel = new MarkAttendanceViewModel
-                {
-                    SessionId = session.SessionId,
-                    ClassName = session.SchoolClass?.ClassName ?? "N/A",
-                    TeacherName = session.SchoolClass?.Teacher?.FullName ?? "N/A",
-                    SessionDate = session.SessionDate,
-                    Topic = session.Topic,
-                    Students = new List<StudentAttendanceItem>
-                    {
-                        new StudentAttendanceItem
-                        {
-                            StudentId = student.StudentId,
-                            StudentName = student.Name,
-                            StudentEmail = student.Email,
-                            Status = record.Status,
-                            Remarks = record.Remarks
-                        }
-                    }
-                };
-
-                return View(studentViewModel);
-            }
+            
 
             // For Admin/Teacher: show all enrolled students
             var viewModel = new MarkAttendanceViewModel
@@ -241,6 +179,7 @@ namespace AttendanceTrackingSystem.Controllers
         // POST: Save Marked Attendance & Trigger Email Notification
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Teacher")]
         public async Task<IActionResult> Mark(MarkAttendanceViewModel model)
         {
             var session = await _context.AttendanceSessions
@@ -308,6 +247,7 @@ namespace AttendanceTrackingSystem.Controllers
 
         // GET: Display QR Code for Attendance Check-in
         [HttpGet]
+        [Authorize(Roles = "Admin,Teacher")]
         public async Task<IActionResult> QRCode(int id)
         {
             var session = await _context.AttendanceSessions
@@ -328,28 +268,65 @@ namespace AttendanceTrackingSystem.Controllers
             return View(session);
         }
 
-        // GET: Quick Check-In via QR Code URL
-        [HttpGet]
-        public async Task<IActionResult> QuickCheckIn(string token, int studentId)
+        // POST: PIN Check-In
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> PinCheckIn(string pinCode)
         {
+            if (string.IsNullOrWhiteSpace(pinCode))
+            {
+                TempData["ErrorMessage"] = "Please enter a valid PIN.";
+                return RedirectToAction("Index", "Dashboard");
+            }
+
+            var email = User.FindFirstValue(ClaimTypes.Email)?.ToLower();
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower() == email);
+            if (student == null) return NotFound("Student profile not found.");
+
             var session = await _context.AttendanceSessions
                 .Include(s => s.SchoolClass)
-                .FirstOrDefaultAsync(s => s.QRCodeToken == token);
+                .FirstOrDefaultAsync(s => s.QRCodeToken == pinCode);
 
-            if (session == null) return NotFound("Invalid QR Code session token.");
+            if (session == null)
+            {
+                TempData["ErrorMessage"] = "Invalid PIN code.";
+                return RedirectToAction("Index", "Dashboard");
+            }
 
             var record = await _context.AttendanceRecords
-                .FirstOrDefaultAsync(r => r.SessionId == session.SessionId && r.StudentId == studentId);
+                .FirstOrDefaultAsync(r => r.SessionId == session.SessionId && r.StudentId == student.StudentId);
 
             if (record != null)
             {
-                record.Status = "Present";
-                record.MarkedAt = DateTime.Now;
+                if (record.Status == "Present")
+                {
+                    TempData["SuccessMessage"] = "You have already checked in for this session!";
+                }
+                else
+                {
+                    record.Status = "Present";
+                    record.MarkedAt = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = "You have successfully marked your attendance using the PIN!";
+                }
+            }
+            else
+            {
+                record = new AttendanceRecord
+                {
+                    SessionId = session.SessionId,
+                    StudentId = student.StudentId,
+                    Status = "Present",
+                    MarkedAt = DateTime.Now
+                };
+                _context.AttendanceRecords.Add(record);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "You have checked in successfully via QR Code!";
+                TempData["SuccessMessage"] = "You have successfully marked your attendance using the PIN!";
             }
 
-            return RedirectToAction("StudentHistory", "AttendanceReport", new { studentId = studentId });
+            return RedirectToAction("StudentHistory", "AttendanceReport", new { studentId = student.StudentId });
         }
     }
 }
+

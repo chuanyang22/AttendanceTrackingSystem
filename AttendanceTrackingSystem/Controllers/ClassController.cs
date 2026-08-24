@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -75,6 +75,9 @@ namespace AttendanceTrackingSystem.Controllers
                 .Include(c => c.Teacher)
                 .Include(c => c.Enrollments)
                     .ThenInclude(e => e.Student)
+                        .ThenInclude(s => s.AttendanceRecords)
+                            .ThenInclude(ar => ar.AttendanceSession)
+                .Include(c => c.AttendanceSessions)
                 .FirstOrDefaultAsync(c => c.ClassId == id);
 
             if (schoolClass == null) return NotFound();
@@ -107,6 +110,18 @@ namespace AttendanceTrackingSystem.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([Bind("ClassName,Schedule,TeacherId")] SchoolClass schoolClass)
         {
+            if (!string.IsNullOrEmpty(schoolClass.Schedule))
+            {
+                var parts = schoolClass.Schedule.Split(new[] { ' ', '-' });
+                if (parts.Length == 3 && TimeSpan.TryParse(parts[1], out TimeSpan start) && TimeSpan.TryParse(parts[2], out TimeSpan end))
+                {
+                    if ((end - start).TotalHours < 1)
+                        ModelState.AddModelError("Schedule", "Class duration must be at least 1 hour.");
+                    else if ((end - start).TotalHours > 4)
+                        ModelState.AddModelError("Schedule", "Class duration cannot exceed 4 hours.");
+                }
+            }
+
             if (ModelState.IsValid)
             {
                 _context.Add(schoolClass);
@@ -138,6 +153,18 @@ namespace AttendanceTrackingSystem.Controllers
         public async Task<IActionResult> Edit(int id, [Bind("ClassId,ClassName,Schedule,TeacherId")] SchoolClass schoolClass)
         {
             if (id != schoolClass.ClassId) return NotFound();
+
+            if (!string.IsNullOrEmpty(schoolClass.Schedule))
+            {
+                var parts = schoolClass.Schedule.Split(new[] { ' ', '-' });
+                if (parts.Length == 3 && TimeSpan.TryParse(parts[1], out TimeSpan start) && TimeSpan.TryParse(parts[2], out TimeSpan end))
+                {
+                    if ((end - start).TotalHours < 1)
+                        ModelState.AddModelError("Schedule", "Class duration must be at least 1 hour.");
+                    else if ((end - start).TotalHours > 4)
+                        ModelState.AddModelError("Schedule", "Class duration cannot exceed 4 hours.");
+                }
+            }
 
             if (ModelState.IsValid)
             {

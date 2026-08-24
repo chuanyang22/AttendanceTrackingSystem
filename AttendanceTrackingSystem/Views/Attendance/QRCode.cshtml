@@ -1,18 +1,17 @@
 @model AttendanceTrackingSystem.Models.AttendanceSession
 @{
-    ViewData["Title"] = "QR Code Check-in";
-    var qrApiUrl = $"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={Url.Action("QuickCheckIn", "Attendance", new { token = Model.QRCodeToken }, Context.Request.Scheme)}";
+    ViewData["Title"] = "Session PIN Code";
 }
 
-<div class="text-center my-4">
-    <h2>QR Code Check-in</h2>
+<div class="text-center my-4 py-5 bg-light rounded shadow-sm border">
+    <h2 class="mb-4">Attendance PIN Code</h2>
     <h4>Class: @Model.SchoolClass?.ClassName</h4>
-    <p class="text-muted">Date: @Model.SessionDate.ToString("dd MMM yyyy")</p>
+    <p class="text-muted mb-4">Date: @Model.SessionDate.ToString("dd MMM yyyy")</p>
 
-    <div class="my-4">
-        <img src="@qrApiUrl" alt="Attendance QR Code" class="img-thumbnail shadow" style="width: 250px; height: 250px;" />
+    <div class="my-5">
+        <div class="display-1 fw-bold text-primary tracking-wider" style="letter-spacing: 10px;">@Model.QRCodeToken</div>
     </div>
 
-    <p class="text-secondary">Scan this QR Code using a mobile camera or device to check in automatically.</p>
-    <a asp-action="Index" class="btn btn-secondary">Back to Sessions</a>
+    <p class="text-secondary fs-5 mt-4">Ask your students to enter this 6-digit PIN on their dashboard to mark themselves present.</p>
+    <a asp-action="Index" class="btn btn-secondary mt-3">Back to Sessions</a>
 </div>

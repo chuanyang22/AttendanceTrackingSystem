@@ -1,4 +1,4 @@
-﻿@model AttendanceTrackingSystem.Models.ViewModels.DashboardViewModel
+@model AttendanceTrackingSystem.Models.ViewModels.DashboardViewModel
 
 @{
     ViewData["Title"] = "Dashboard";
@@ -11,115 +11,191 @@
     </div>
 </div>
 
-<!-- Quick Stat Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 bg-primary text-white p-3 rounded-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-0 text-uppercase">Students</h6>
-                    <h2 class="mt-2 mb-0 fw-bold">@Model.TotalStudents</h2>
-                </div>
-                <i class="bi bi-people fs-1 opacity-50"></i>
+@if (User.IsInRole("Student"))
+{
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 bg-light p-4 rounded-3">
+                <h5 class="fw-bold mb-3"><i class="bi bi-upc-scan me-2"></i>Quick Attendance Check-In</h5>
+                <form asp-controller="Attendance" asp-action="PinCheckIn" method="post" class="d-flex gap-2">
+                    <input type="text" name="pinCode" class="form-control form-control-lg text-center fw-bold" placeholder="Enter 6-Digit PIN" maxlength="6" pattern="\d{6}" required style="letter-spacing: 5px;" />
+                    <button type="submit" class="btn btn-primary btn-lg px-4">Submit</button>
+                </form>
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="text-danger mt-2 small">@TempData["ErrorMessage"]</div>
+                }
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="text-success mt-2 small">@TempData["SuccessMessage"]</div>
+                }
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 bg-success text-white p-3 rounded-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-0 text-uppercase">Classes</h6>
-                    <h2 class="mt-2 mb-0 fw-bold">@Model.TotalClasses</h2>
-                </div>
-                <i class="bi bi-easel fs-1 opacity-50"></i>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 bg-warning text-dark p-3 rounded-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-0 text-uppercase">Sessions</h6>
-                    <h2 class="mt-2 mb-0 fw-bold">@Model.TotalSessions</h2>
-                </div>
-                <i class="bi bi-calendar-check fs-1 opacity-50"></i>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm border-0 bg-dark text-white p-3 rounded-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-0 text-uppercase">System Users</h6>
-                    <h2 class="mt-2 mb-0 fw-bold">@Model.TotalUsers</h2>
-                </div>
-                <i class="bi bi-person-badge fs-1 opacity-50"></i>
-            </div>
-        </div>
-    </div>
-</div>
+}
 
-<!-- Charts Row -->
-<div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="card shadow-sm border-0 p-3 h-100">
-            <h5 class="card-title fw-bold mb-3">Attendance Distribution</h5>
-            <div style="height: 280px; position: relative;">
-                <canvas id="attendancePieChart"></canvas>
+@if (!User.IsInRole("Student"))
+{
+    <!-- Quick Stat Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-primary text-white p-3 rounded-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 text-uppercase">Students</h6>
+                        <h2 class="mt-2 mb-0 fw-bold">@Model.TotalStudents</h2>
+                    </div>
+                    <i class="bi bi-people fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-success text-white p-3 rounded-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 text-uppercase">Classes</h6>
+                        <h2 class="mt-2 mb-0 fw-bold">@Model.TotalClasses</h2>
+                    </div>
+                    <i class="bi bi-easel fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-warning text-dark p-3 rounded-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 text-uppercase">Sessions</h6>
+                        <h2 class="mt-2 mb-0 fw-bold">@Model.TotalSessions</h2>
+                    </div>
+                    <i class="bi bi-calendar-check fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-dark text-white p-3 rounded-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0 text-uppercase">System Users</h6>
+                        <h2 class="mt-2 mb-0 fw-bold">@Model.TotalUsers</h2>
+                    </div>
+                    <i class="bi bi-person-badge fs-1 opacity-50"></i>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card shadow-sm border-0 p-3 h-100">
-            <h5 class="card-title fw-bold mb-3">Attendance Overview Comparison</h5>
-            <div style="height: 280px; position: relative;">
-                <canvas id="attendanceBarChart"></canvas>
+}
+
+@if (User.IsInRole("Student"))
+{
+    <h4 class="fw-bold mb-3">My Classes</h4>
+    <div class="row g-3 mb-4">
+        @foreach(var classStat in Model.ClassStats)
+        {
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 p-3 rounded-3 h-100 position-relative">
+                    <h5 class="fw-bold text-primary mb-3 text-truncate" title="@classStat.ClassName">@classStat.ClassName</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i> Present:</span>
+                        <span class="fw-bold">@classStat.Present</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-danger fw-semibold"><i class="bi bi-x-circle me-1"></i> Absent:</span>
+                        <span class="fw-bold">@classStat.Absent</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-warning text-dark fw-semibold"><i class="bi bi-exclamation-circle me-1"></i> Excused:</span>
+                        <span class="fw-bold">@classStat.Excused</span>
+                    </div>
+                    <hr class="mt-0 mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-semibold">Attendance Rate:</span>
+                        <span class="badge @(classStat.AttendancePercentage >= 80 ? "bg-success" : "bg-danger") fs-6">
+                            @classStat.AttendancePercentage%
+                        </span>
+                    </div>
+                    @if (classStat.AttendancePercentage < 80)
+                    {
+                        <div class="alert alert-danger mb-0 p-2 text-center" style="font-size: 0.85rem;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> 
+                            <strong>&lt;80%</strong> - Cannot sit for final exam without appeal
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@if (!User.IsInRole("Student"))
+{
+    <!-- Charts Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 p-3 h-100">
+                <h5 class="card-title fw-bold mb-3">Overall Attendance Distribution</h5>
+                <div style="height: 280px; position: relative;">
+                    <canvas id="attendancePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 p-3 h-100">
+                <h5 class="card-title fw-bold mb-3">Attendance Overview Comparison</h5>
+                <div style="height: 280px; position: relative;">
+                    <canvas id="attendanceBarChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const present = @Model.PresentCount;
         const absent = @Model.AbsentCount;
-        const late = @Model.LateCount;
+        const excused = @Model.ExcusedCount;
 
         // Doughnut / Pie Chart
-        new Chart(document.getElementById('attendancePieChart'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Present', 'Absent', 'Late'],
-                datasets: [{
-                    data: [present, absent, late],
-                    backgroundColor: ['#198754', '#dc3545', '#ffc107']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-
-        // Bar Chart
-        new Chart(document.getElementById('attendanceBarChart'), {
-            type: 'bar',
-            data: {
-                labels: ['Present', 'Absent', 'Late'],
-                datasets: [{
-                    label: 'Total Headcount',
-                    data: [present, absent, late],
-                    backgroundColor: ['#198754', '#dc3545', '#ffc107']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: { beginAtZero: true }
+        var pieChartEl = document.getElementById('attendancePieChart');
+        if (pieChartEl) {
+            new Chart(pieChartEl, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Present', 'Absent', 'Excused'],
+                    datasets: [{
+                        data: [present, absent, excused],
+                        backgroundColor: ['#198754', '#dc3545', '#ffc107']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
                 }
-            }
-        });
+            });
+        }
+
+        // Bar Chart (Only for non-students)
+        var barChartEl = document.getElementById('attendanceBarChart');
+        if (barChartEl) {
+            new Chart(barChartEl, {
+                type: 'bar',
+                data: {
+                    labels: ['Present', 'Absent', 'Excused'],
+                    datasets: [{
+                        label: 'Total Headcount',
+                        data: [present, absent, excused],
+                        backgroundColor: ['#198754', '#dc3545', '#ffc107']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
     </script>
 }

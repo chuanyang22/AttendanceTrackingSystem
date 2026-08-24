@@ -1,4 +1,4 @@
-@model AttendanceTrackingSystem.Models.ViewModels.ClassAttendanceReportViewModel
+﻿@model AttendanceTrackingSystem.Models.ViewModels.ClassAttendanceReportViewModel
 @{
     Layout = null;
 }
@@ -32,7 +32,7 @@
                 <th>Student Name</th>
                 <th>Email</th>
                 <th>Present</th>
-                <th>Late</th>
+                <th>Excused</th>
                 <th>Absent</th>
                 <th>Excused</th>
                 <th>Attendance Rate (%)</th>
@@ -45,7 +45,7 @@
                     <td>@s.StudentName</td>
                     <td>@s.StudentEmail</td>
                     <td>@s.PresentCount</td>
-                    <td>@s.LateCount</td>
+                    <td>@s.ExcusedCount</td>
                     <td>@s.AbsentCount</td>
                     <td>@s.ExcusedCount</td>
                     <td>@s.AttendancePercentage%</td>

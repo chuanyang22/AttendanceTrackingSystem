@@ -1,4 +1,4 @@
-﻿using AttendanceTrackingSystem.Data;
+using AttendanceTrackingSystem.Data;
 using AttendanceTrackingSystem.Models;
 using AttendanceTrackingSystem.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -33,14 +33,49 @@ namespace AttendanceTrackingSystem.Controllers
                 TotalUsers = await _context.Users.CountAsync()
             };
 
-            // Aggregate Attendance Status Counts for Charts
-            model.PresentCount = await _context.AttendanceRecords.CountAsync(r => r.Status == "Present");
-            model.AbsentCount = await _context.AttendanceRecords.CountAsync(r => r.Status == "Absent");
-            model.LateCount = await _context.AttendanceRecords.CountAsync(r => r.Status == "Late");
+            if (userRole == "Student")
+            {
+                var email = User.FindFirstValue(ClaimTypes.Email)?.ToLower();
+                var student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower() == email);
+                if (student != null)
+                {
+                    model.PresentCount = await _context.AttendanceRecords.CountAsync(r => r.StudentId == student.StudentId && r.Status == "Present");
+                    model.AbsentCount = await _context.AttendanceRecords.CountAsync(r => r.StudentId == student.StudentId && r.Status == "Absent");
+                    model.ExcusedCount = await _context.AttendanceRecords.CountAsync(r => r.StudentId == student.StudentId && r.Status == "Excused");
 
-            int totalRecords = model.PresentCount + model.AbsentCount + model.LateCount;
+                    // Populate individual class stats
+                    var enrollments = await _context.Enrollments
+                        .Include(e => e.SchoolClass)
+                        .Where(e => e.StudentId == student.StudentId)
+                        .ToListAsync();
+
+                    foreach (var e in enrollments)
+                    {
+                        var classRecords = await _context.AttendanceRecords
+                            .Include(r => r.AttendanceSession)
+                            .Where(r => r.StudentId == student.StudentId && r.AttendanceSession != null && r.AttendanceSession.ClassId == e.ClassId)
+                            .ToListAsync();
+
+                        model.ClassStats.Add(new StudentClassAttendanceStat
+                        {
+                            ClassName = e.SchoolClass?.ClassName ?? "Unknown",
+                            Present = classRecords.Count(r => r.Status == "Present"),
+                            Absent = classRecords.Count(r => r.Status == "Absent"),
+                            Excused = classRecords.Count(r => r.Status == "Excused")
+                        });
+                    }
+                }
+            }
+            else
+            {
+                model.PresentCount = await _context.AttendanceRecords.CountAsync(r => r.Status == "Present");
+                model.AbsentCount = await _context.AttendanceRecords.CountAsync(r => r.Status == "Absent");
+                model.ExcusedCount = await _context.AttendanceRecords.CountAsync(r => r.Status == "Excused");
+            }
+
+            int totalRecords = model.PresentCount + model.AbsentCount + model.ExcusedCount;
             model.OverallAttendanceRate = totalRecords > 0
-                ? Math.Round(((double)(model.PresentCount + model.LateCount) / totalRecords) * 100, 1)
+                ? Math.Round(((double)(model.PresentCount) / totalRecords) * 100, 1)
                 : 0.0;
 
             return View(model);

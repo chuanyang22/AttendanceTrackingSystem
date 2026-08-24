@@ -10,7 +10,6 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h2 class="fw-bold mb-1">@Model.ClassName</h2>
-                    <span class="badge bg-primary fs-6">Schedule: @Model.Schedule</span>
                 </div>
                 <div class="d-flex gap-2">
                     @if (User.IsInRole("Admin"))
@@ -35,14 +34,107 @@
                     <span class="text-muted small d-block">Teacher</span>
                     <strong class="fs-6">@Model.Teacher?.FullName</strong>
                 </div>
-                <div class="col-md-4">
-                    <span class="text-muted small d-block">Total Enrolled</span>
-                    <strong class="fs-6 text-primary">@(Model.Enrollments?.Count ?? 0) Students</strong>
+                @if (!User.IsInRole("Student"))
+                {
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Total Enrolled</span>
+                        <strong class="fs-6 text-primary">@(Model.Enrollments?.Count ?? 0) Students</strong>
+                    </div>
+                }
+            </div>
+
+            @{
+                int presentCount = 0;
+                int excusedCount = 0;
+                int absentCount = 0;
+                int pendingCount = 0;
+                int totalSessionsCount = Model.AttendanceSessions?.Count ?? 0;
+
+                if (User.IsInRole("Student"))
+                {
+                    var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value?.ToLower();
+                    var myStudent = Model.Enrollments?.FirstOrDefault(e => e.Student?.Email?.ToLower() == userEmail)?.Student;
+                    
+                    if (myStudent != null && Model.AttendanceSessions != null)
+                    {
+                        foreach (var session in Model.AttendanceSessions)
+                        {
+                            var record = myStudent.AttendanceRecords?.FirstOrDefault(r => r.SessionId == session.SessionId);
+                            if (record != null)
+                            {
+                                if (record.Status == "Present") presentCount++;
+                                else if (record.Status == "Excused") excusedCount++;
+                                else absentCount++;
+                            }
+                            else
+                            {
+                                if ((DateTime.Now - session.CreatedAt).TotalHours > 24) absentCount++;
+                                else pendingCount++;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (Model.AttendanceSessions != null)
+                    {
+                        foreach (var session in Model.AttendanceSessions)
+                        {
+                            if (session.AttendanceRecords != null)
+                            {
+                                presentCount += session.AttendanceRecords.Count(r => r.Status == "Present");
+                                excusedCount += session.AttendanceRecords.Count(r => r.Status == "Excused");
+                                absentCount += session.AttendanceRecords.Count(r => r.Status == "Absent");
+                            }
+                            
+                            int expectedForSession = Model.Enrollments?.Count ?? 0;
+                            int recordedForSession = session.AttendanceRecords?.Count ?? 0;
+                            int missingForSession = expectedForSession - recordedForSession;
+                            
+                            if (missingForSession > 0)
+                            {
+                                if ((DateTime.Now - session.CreatedAt).TotalHours > 24) absentCount += missingForSession;
+                                else pendingCount += missingForSession;
+                            }
+                        }
+                    }
+                }
+
+                int totalCalculated = presentCount + excusedCount + absentCount;
+                double percentage = totalCalculated > 0 ? Math.Round((double)(presentCount + excusedCount) / totalCalculated * 100, 1) : 0;
+                string chartColor = percentage >= 80 ? "#198754" : (percentage >= 50 ? "#ffc107" : "#dc3545");
+            }
+
+            <!-- Attendance Distribution Chart -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-4 text-center">Attendance Distribution</h5>
+                            <div class="d-flex justify-content-center align-items-center flex-column">
+                                <div style="width: 250px; height: 250px; position: relative;">
+                                    <canvas id="classPieChart"></canvas>
+                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                                        <div style="font-size: 2.5rem; font-weight: bold; color: @chartColor">@percentage%</div>
+                                        <div class="text-muted small">Attendance</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-center gap-4 mt-4">
+                                    <div class="d-flex align-items-center"><span class="badge rounded-circle p-2 me-2" style="background-color: #198754;"></span>Present</div>
+                                    <div class="d-flex align-items-center"><span class="badge rounded-circle p-2 me-2" style="background-color: #ffc107;"></span>Excused</div>
+                                    <div class="d-flex align-items-center"><span class="badge rounded-circle p-2 me-2" style="background-color: #dc3545;"></span>Absent</div>
+                                    <div class="d-flex align-items-center"><span class="badge rounded-circle p-2 me-2" style="background-color: #6c757d;"></span>Pending</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Enrolled Students Table -->
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            @if (!User.IsInRole("Student"))
+            {
+                <!-- Enrolled Students Table -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="fw-bold mb-0">Enrolled Students</h4>
                 @if (User.IsInRole("Admin"))
                 {
@@ -71,8 +163,36 @@
                         <tbody>
                             @foreach (var enrollment in Model.Enrollments)
                             {
-                                var isPresent = enrollment.Student?.AttendanceRecords?
-                                .Any(r => r.AttendanceSession?.ClassId == Model.ClassId && r.Status == "Present") ?? false;
+                                var latestSession = Model.AttendanceSessions?.OrderByDescending(s => s.CreatedAt).FirstOrDefault();
+                                string statusText = "No Session";
+                                string badgeClass = "bg-secondary";
+                                string icon = "bi-dash-circle";
+
+                                if (latestSession != null)
+                                {
+                                    var record = enrollment.Student?.AttendanceRecords?.FirstOrDefault(r => r.SessionId == latestSession.SessionId);
+                                    if (record != null && record.Status == "Present")
+                                    {
+                                        statusText = "Present";
+                                        badgeClass = "bg-success";
+                                        icon = "bi-check-circle";
+                                    }
+                                    else
+                                    {
+                                        if ((DateTime.Now - latestSession.CreatedAt).TotalHours > 24)
+                                        {
+                                            statusText = "Absent";
+                                            badgeClass = "bg-danger";
+                                            icon = "bi-x-circle";
+                                        }
+                                        else
+                                        {
+                                            statusText = "Pending";
+                                            badgeClass = "bg-warning text-dark";
+                                            icon = "bi-clock";
+                                        }
+                                    }
+                                }
 
                                 <tr>
                                     <td class="fw-semibold">
@@ -80,12 +200,9 @@
                                     </td>
                                     <td class="text-muted">@(enrollment.Student?.Email ?? "N/A")</td>
                                     <td>
-                                        @if (isPresent)
-                                        {
-                                            <span class="badge bg-success px-2 py-1">
-                                                <i class="bi bi-check-circle me-1"></i> Present
-                                            </span>
-                                        }
+                                        <span class="badge @badgeClass px-2 py-1">
+                                            <i class="bi @icon me-1"></i> @statusText
+                                        </span>
                                     </td>
                                     <td>@enrollment.EnrollDate.ToShortDateString()</td>
                                     @if (User.IsInRole("Admin"))
@@ -108,6 +225,182 @@
                     <i class="bi bi-info-circle me-1"></i> No students are enrolled in this class yet.
                 </div>
             }
+        }
+        </div>
+    </div>
+
+    <!-- Attendance Sessions Card -->
+    <div class="card card-custom mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold mb-0">Attendance Sessions</h4>
+                @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
+                {
+                    <form asp-controller="Attendance" asp-action="CreateSession" method="post" class="d-inline-flex gap-2 align-items-center">
+                        <input type="hidden" name="ClassId" value="@Model.ClassId" />
+                        <input type="hidden" name="SessionDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        <input type="hidden" name="Topic" value="Regular Class" />
+                        <select name="SessionType" class="form-select form-select-sm" style="width: auto;">
+                            <option value="Lecture">Lecture</option>
+                            <option value="Tutorial">Tutorial</option>
+                            <option value="Practical">Practical</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm text-nowrap">
+                            <i class="bi bi-plus-circle me-1"></i> New Session Today
+                        </button>
+                    </form>
+                }
+            </div>
+
+            @if (Model.AttendanceSessions != null && Model.AttendanceSessions.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                @if (User.IsInRole("Student"))
+                                {
+                                    <th>Status</th>
+                                }
+                                else
+                                {
+                                    <th>Topic</th>
+                                    <th class="text-end">Actions</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var session in Model.AttendanceSessions.OrderByDescending(s => s.SessionDate))
+                            {
+                                <tr>
+                                    <td><span class="badge bg-secondary">@(string.IsNullOrEmpty(session.SessionType) ? "L" : session.SessionType.Substring(0,1))</span></td>
+                                    <td class="fw-semibold">@session.SessionDate.ToString("yyyy-MM-dd")</td>
+                                    <td>@(Model.Schedule ?? "Not Set")</td>
+                                    
+                                    @if (User.IsInRole("Student"))
+                                    {
+                                        var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value?.ToLower();
+                                        var enrollment = Model.Enrollments?.FirstOrDefault(e => e.Student?.Email?.ToLower() == userEmail);
+                                        var record = enrollment?.Student?.AttendanceRecords?.FirstOrDefault(r => r.SessionId == session.SessionId);
+                                        
+                                        string statusText = "No Record";
+                                        string badgeClass = "bg-secondary";
+                                        string icon = "bi-dash-circle";
+
+                                        if (record != null)
+                                        {
+                                            if (record.Status == "Present")
+                                            {
+                                                statusText = "Present";
+                                                badgeClass = "bg-success";
+                                                icon = "bi-check-circle";
+                                            }
+                                            else if (record.Status == "Absent")
+                                            {
+                                                statusText = "Absent";
+                                                badgeClass = "bg-danger";
+                                                icon = "bi-x-circle";
+                                            }
+                                            else if (record.Status == "Excused")
+                                            {
+                                                statusText = "Excused";
+                                                badgeClass = "bg-warning text-dark";
+                                                icon = "bi-exclamation-circle";
+                                            }
+                                            else
+                                            {
+                                                if ((DateTime.Now - session.CreatedAt).TotalHours > 24)
+                                                {
+                                                    statusText = "Absent";
+                                                    badgeClass = "bg-danger";
+                                                    icon = "bi-x-circle";
+                                                }
+                                                else
+                                                {
+                                                    statusText = "Pending";
+                                                    badgeClass = "bg-warning text-dark";
+                                                    icon = "bi-clock";
+                                                }
+                                            }
+                                        }
+
+                                        <td>
+                                            <span class="badge @badgeClass px-2 py-1">
+                                                <i class="bi @icon me-1"></i> @statusText
+                                            </span>
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td>@session.Topic</td>
+                                        <td class="text-end">
+                                            <a asp-controller="Attendance" asp-action="Mark" asp-route-id="@session.SessionId" class="btn btn-success btn-sm rounded-2 me-1">
+                                                <i class="bi bi-check2-circle me-1"></i> Mark Attendance
+                                            </a>
+                                            <a asp-controller="Attendance" asp-action="QRCode" asp-route-id="@session.SessionId" class="btn btn-outline-dark btn-sm rounded-2">
+                                                <i class="bi bi-123 me-1"></i> PIN Code
+                                            </a>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-light border text-center text-muted py-4 mb-0">
+                    <i class="bi bi-info-circle me-1"></i> No attendance sessions have been created for this class yet.
+                </div>
+            }
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var ctx = document.getElementById('classPieChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Present', 'Excused', 'Absent', 'Pending'],
+                        datasets: [{
+                            data: [@presentCount, @excusedCount, @absentCount, @pendingCount],
+                            backgroundColor: ['#198754', '#ffc107', '#dc3545', '#6c757d'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%',
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += context.parsed;
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+}

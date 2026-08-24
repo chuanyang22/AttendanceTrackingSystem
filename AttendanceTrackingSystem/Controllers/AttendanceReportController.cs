@@ -74,7 +74,6 @@ namespace AttendanceTrackingSystem.Controllers
                 StudentEmail = student.Email,
                 TotalSessions = records.Count,
                 PresentCount = records.Count(r => r.Status == "Present"),
-                LateCount = records.Count(r => r.Status == "Late"),
                 AbsentCount = records.Count(r => r.Status == "Absent"),
                 ExcusedCount = records.Count(r => r.Status == "Excused"),
                 Records = records
@@ -127,7 +126,6 @@ namespace AttendanceTrackingSystem.Controllers
                     StudentEmail = student.Email,
                     TotalSessions = sessions.Count,
                     PresentCount = studentRecords.Count(r => r.Status == "Present"),
-                    LateCount = studentRecords.Count(r => r.Status == "Late"),
                     AbsentCount = studentRecords.Count(r => r.Status == "Absent"),
                     ExcusedCount = studentRecords.Count(r => r.Status == "Excused")
                 });
@@ -182,7 +180,6 @@ namespace AttendanceTrackingSystem.Controllers
                     StudentEmail = student.Email,
                     TotalSessions = sessions.Count,
                     PresentCount = records.Count(r => r.Status == "Present"),
-                    LateCount = records.Count(r => r.Status == "Late"),
                     AbsentCount = records.Count(r => r.Status == "Absent"),
                     ExcusedCount = records.Count(r => r.Status == "Excused")
                 };

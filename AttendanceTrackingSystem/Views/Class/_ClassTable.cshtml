@@ -1,9 +1,10 @@
-@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
+﻿@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
 
 <table class="table table-striped">
     <thead>
         <tr>
             <th>Class Name</th>
+            
             <th>Schedule</th>
             <th>Teacher</th>
             <th></th>
@@ -14,6 +15,7 @@
         {
             <tr>
                 <td>@item.ClassName</td>
+                
                 <td>@item.Schedule</td>
                 <td>@item.Teacher?.FullName</td>
                 <td>
@@ -31,3 +33,4 @@
         }
     </tbody>
 </table>
+

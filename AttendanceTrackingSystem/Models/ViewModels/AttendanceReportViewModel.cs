@@ -7,14 +7,13 @@ namespace AttendanceTrackingSystem.Models.ViewModels
         public string StudentEmail { get; set; } = string.Empty;
         public int TotalSessions { get; set; }
         public int PresentCount { get; set; }
-        public int LateCount { get; set; }
         public int AbsentCount { get; set; }
         public int ExcusedCount { get; set; }
 
         // Additional Feature: Attendance Percentage
         public double AttendancePercentage => TotalSessions == 0
             ? 0
-            : Math.Round(((double)(PresentCount + LateCount) / TotalSessions) * 100, 1);
+            : Math.Round(((double)(PresentCount + ExcusedCount) / TotalSessions) * 100, 1);
 
         public List<AttendanceRecordDetail> Records { get; set; } = new List<AttendanceRecordDetail>();
     }
