@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -20,6 +20,8 @@ namespace AttendanceTrackingSystem.Migrations
                 type: "int",
                 nullable: false,
                 defaultValue: 0);
+
+            migrationBuilder.Sql("UPDATE SchoolClasses SET TeacherId = (SELECT ISNULL(MIN(UserId), 1) FROM Users);");
 
             migrationBuilder.CreateIndex(
                 name: "IX_SchoolClasses_TeacherId",

@@ -18,6 +18,21 @@ namespace AttendanceTrackingSystem.Models.ViewModels
         public double OverallAttendanceRate { get; set; }
         
         public List<StudentClassAttendanceStat> ClassStats { get; set; } = new List<StudentClassAttendanceStat>();
+        public List<TeacherSessionItem> TeacherTodaySessions { get; set; } = new List<TeacherSessionItem>();
+    }
+
+    public class TeacherSessionItem
+    {
+        public int SessionId { get; set; }
+        public int ClassId { get; set; }
+        public string ClassName { get; set; } = string.Empty;
+        public string SessionType { get; set; } = "Lecture";
+        public string PinCode { get; set; } = string.Empty;
+        public DateTime SessionDate { get; set; }
+        public TimeSpan? StartTime { get; set; }
+        public TimeSpan? EndTime { get; set; }
+        public int PresentCount { get; set; }
+        public int TotalEnrolled { get; set; }
     }
 
     public class StudentClassAttendanceStat

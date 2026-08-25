@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Data;
+using AttendanceTrackingSystem.Models;
 using AttendanceTrackingSystem.Models.ViewModels;
 
 namespace AttendanceTrackingSystem.Controllers
@@ -37,9 +38,24 @@ namespace AttendanceTrackingSystem.Controllers
                 }
             }
 
+            IQueryable<Student> studentsQuery = _context.Students.AsQueryable();
+            if (User.IsInRole("Teacher"))
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdStr, out int userId))
+                {
+                    studentsQuery = _context.Enrollments
+                        .Include(e => e.SchoolClass)
+                        .Include(e => e.Student)
+                        .Where(e => e.SchoolClass != null && e.SchoolClass.TeacherId == userId && e.Student != null)
+                        .Select(e => e.Student!)
+                        .Distinct();
+                }
+            }
+
             if (!studentId.HasValue)
             {
-                ViewData["StudentId"] = new SelectList(_context.Students.OrderBy(s => s.Name), "StudentId", "Name");
+                ViewData["StudentId"] = new SelectList(await studentsQuery.OrderBy(s => s.Name).ToListAsync(), "StudentId", "Name");
                 return View(null);
             }
 
@@ -51,7 +67,7 @@ namespace AttendanceTrackingSystem.Controllers
 
             if (student == null)
             {
-                ViewData["StudentId"] = new SelectList(_context.Students.OrderBy(s => s.Name), "StudentId", "Name", studentId);
+                ViewData["StudentId"] = new SelectList(await studentsQuery.OrderBy(s => s.Name).ToListAsync(), "StudentId", "Name", studentId);
                 return View(null);
             }
 
@@ -79,7 +95,7 @@ namespace AttendanceTrackingSystem.Controllers
                 Records = records
             };
 
-            ViewData["StudentId"] = new SelectList(_context.Students.OrderBy(s => s.Name), "StudentId", "Name", studentId);
+            ViewData["StudentId"] = new SelectList(await studentsQuery.OrderBy(s => s.Name).ToListAsync(), "StudentId", "Name", studentId);
             return View(summary);
         }
 
@@ -90,7 +106,17 @@ namespace AttendanceTrackingSystem.Controllers
             int selectedMonth = month ?? DateTime.Now.Month;
             int selectedYear = year ?? DateTime.Now.Year;
 
-            ViewData["ClassId"] = new SelectList(_context.SchoolClasses.OrderBy(c => c.ClassName), "ClassId", "ClassName", classId);
+            IQueryable<SchoolClass> classesQuery = _context.SchoolClasses.AsQueryable();
+            if (User.IsInRole("Teacher"))
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdStr, out int userId))
+                {
+                    classesQuery = classesQuery.Where(c => c.TeacherId == userId);
+                }
+            }
+
+            ViewData["ClassId"] = new SelectList(await classesQuery.OrderBy(c => c.ClassName).ToListAsync(), "ClassId", "ClassName", classId);
             ViewData["SelectedMonth"] = selectedMonth;
             ViewData["SelectedYear"] = selectedYear;
 

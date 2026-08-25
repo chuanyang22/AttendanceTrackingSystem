@@ -36,53 +36,111 @@
 
 @if (!User.IsInRole("Student"))
 {
+    var cardColClass = User.IsInRole("Admin") ? "col-md-3" : "col-md-4";
+
     <!-- Quick Stat Cards -->
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
+        <div class="@cardColClass">
             <div class="card shadow-sm border-0 bg-primary text-white p-3 rounded-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="mb-0 text-uppercase">Students</h6>
+                        <h6 class="mb-0 text-uppercase">@(User.IsInRole("Teacher") ? "My Students" : "Students")</h6>
                         <h2 class="mt-2 mb-0 fw-bold">@Model.TotalStudents</h2>
                     </div>
                     <i class="bi bi-people fs-1 opacity-50"></i>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="@cardColClass">
             <div class="card shadow-sm border-0 bg-success text-white p-3 rounded-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="mb-0 text-uppercase">Classes</h6>
+                        <h6 class="mb-0 text-uppercase">@(User.IsInRole("Teacher") ? "My Classes" : "Classes")</h6>
                         <h2 class="mt-2 mb-0 fw-bold">@Model.TotalClasses</h2>
                     </div>
                     <i class="bi bi-easel fs-1 opacity-50"></i>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="@cardColClass">
             <div class="card shadow-sm border-0 bg-warning text-dark p-3 rounded-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="mb-0 text-uppercase">Sessions</h6>
+                        <h6 class="mb-0 text-uppercase">@(User.IsInRole("Teacher") ? "My Sessions" : "Sessions")</h6>
                         <h2 class="mt-2 mb-0 fw-bold">@Model.TotalSessions</h2>
                     </div>
                     <i class="bi bi-calendar-check fs-1 opacity-50"></i>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 bg-dark text-white p-3 rounded-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-0 text-uppercase">System Users</h6>
-                        <h2 class="mt-2 mb-0 fw-bold">@Model.TotalUsers</h2>
+        @* SYSTEM USERS IS ONLY VISIBLE TO ADMINISTRATORS - TEACHERS CANNOT SEE THIS *@
+        @if (User.IsInRole("Admin"))
+        {
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 bg-dark text-white p-3 rounded-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0 text-uppercase">System Users</h6>
+                            <h2 class="mt-2 mb-0 fw-bold">@Model.TotalUsers</h2>
+                        </div>
+                        <i class="bi bi-person-badge fs-1 opacity-50"></i>
                     </div>
-                    <i class="bi bi-person-badge fs-1 opacity-50"></i>
                 </div>
             </div>
-        </div>
+        }
     </div>
+
+    @* Dedicated Teacher Attendance PIN Codes Section *@
+    @if (User.IsInRole("Teacher") && Model.TeacherTodaySessions != null && Model.TeacherTodaySessions.Any())
+    {
+        <div class="card shadow-sm border-0 mb-4 rounded-3 p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-primary">
+                    <i class="bi bi-key-fill me-2"></i>Today's Class Sessions &amp; Attendance PINs
+                </h5>
+                <small class="text-muted">Students can enter the 6-digit PIN on their portal to mark attendance.</small>
+            </div>
+            <div class="row g-3">
+                @foreach (var session in Model.TeacherTodaySessions)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-primary border-2 p-3 rounded-3 h-100 bg-light">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0">@session.ClassName</h6>
+                                    <span class="badge bg-secondary">@session.SessionType</span>
+                                </div>
+                                <span class="badge bg-success">
+                                    <i class="bi bi-person-check me-1"></i>@session.PresentCount / @session.TotalEnrolled Present
+                                </span>
+                            </div>
+                            
+                            @if (session.StartTime.HasValue && session.EndTime.HasValue)
+                            {
+                                <p class="text-muted small mb-2">
+                                    <i class="bi bi-clock me-1"></i>@(DateTime.Today.Add(session.StartTime.Value).ToString("h:mm tt")) - @(DateTime.Today.Add(session.EndTime.Value).ToString("h:mm tt"))
+                                </p>
+                            }
+
+                            <div class="bg-white p-2 rounded text-center border my-2">
+                                <div class="small text-muted fw-semibold">6-Digit Attendance Code</div>
+                                <div class="fs-2 fw-bold text-primary tracking-wider" style="letter-spacing: 5px;">@session.PinCode</div>
+                            </div>
+
+                            <div class="d-flex gap-2 mt-auto">
+                                <a asp-controller="Attendance" asp-action="QRCode" asp-route-id="@session.SessionId" class="btn btn-primary btn-sm flex-fill">
+                                    <i class="bi bi-display me-1"></i> Display PIN
+                                </a>
+                                <a asp-controller="Attendance" asp-action="Mark" asp-route-id="@session.SessionId" class="btn btn-outline-success btn-sm flex-fill">
+                                    <i class="bi bi-check2-square me-1"></i> Roster
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 }
 
 @if (User.IsInRole("Student"))

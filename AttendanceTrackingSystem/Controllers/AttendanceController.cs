@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -353,6 +353,8 @@ namespace AttendanceTrackingSystem.Controllers
         {
             var session = await _context.AttendanceSessions
                 .Include(s => s.SchoolClass)
+                .Include(s => s.AttendanceRecords)
+                    .ThenInclude(r => r.Student)
                 .FirstOrDefaultAsync(s => s.SessionId == id);
 
             if (session == null) return NotFound();
@@ -369,7 +371,36 @@ namespace AttendanceTrackingSystem.Controllers
             return View(session);
         }
 
-        // POST: PIN Check-In
+        // POST: Regenerate a new randomized 6-digit PIN code for a session
+        [HttpPost]
+        [Authorize(Roles = "Admin,Teacher")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RegenerateCode(int id)
+        {
+            var session = await _context.AttendanceSessions
+                .Include(s => s.SchoolClass)
+                .FirstOrDefaultAsync(s => s.SessionId == id);
+
+            if (session == null) return NotFound();
+
+            if (User.IsInRole("Teacher"))
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdStr, out int userId) && session.SchoolClass?.TeacherId != userId)
+                {
+                    return Forbid();
+                }
+            }
+
+            // Generate brand new randomized 6-digit numeric PIN
+            session.QRCodeToken = new Random().Next(100000, 999999).ToString();
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"New 6-digit attendance PIN generated: {session.QRCodeToken}";
+            return RedirectToAction(nameof(QRCode), new { id });
+        }
+
+        // POST: PIN Check-In (Student registers attendance via 6-digit PIN)
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Student")]
@@ -377,22 +408,48 @@ namespace AttendanceTrackingSystem.Controllers
         {
             if (string.IsNullOrWhiteSpace(pinCode))
             {
-                TempData["ErrorMessage"] = "Please enter a valid PIN.";
+                TempData["ErrorMessage"] = "Please enter a valid 6-digit PIN code.";
                 return RedirectToAction("Index", "Dashboard");
             }
 
+            var cleanPin = pinCode.Trim();
+
             var email = User.FindFirstValue(ClaimTypes.Email)?.ToLower();
             var student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower() == email);
-            if (student == null) return NotFound("Student profile not found.");
+            if (student == null)
+            {
+                var userFullName = User.FindFirstValue(ClaimTypes.Name) ?? "Student";
+                student = new Student
+                {
+                    Name = userFullName,
+                    Email = email ?? "",
+                    Status = "Active"
+                };
+                _context.Students.Add(student);
+                await _context.SaveChangesAsync();
+            }
 
             var session = await _context.AttendanceSessions
                 .Include(s => s.SchoolClass)
-                .FirstOrDefaultAsync(s => s.QRCodeToken == pinCode);
+                .FirstOrDefaultAsync(s => s.QRCodeToken == cleanPin);
 
             if (session == null)
             {
-                TempData["ErrorMessage"] = "Invalid PIN code.";
+                TempData["ErrorMessage"] = "Invalid 6-digit PIN code. Please verify the code with your teacher.";
                 return RedirectToAction("Index", "Dashboard");
+            }
+
+            // Verify or add enrollment
+            var isEnrolled = await _context.Enrollments.AnyAsync(e => e.ClassId == session.ClassId && e.StudentId == student.StudentId);
+            if (!isEnrolled)
+            {
+                _context.Enrollments.Add(new Enrollment
+                {
+                    ClassId = session.ClassId,
+                    StudentId = student.StudentId,
+                    EnrollDate = DateTime.Today
+                });
+                await _context.SaveChangesAsync();
             }
 
             var record = await _context.AttendanceRecords
@@ -402,14 +459,15 @@ namespace AttendanceTrackingSystem.Controllers
             {
                 if (record.Status == "Present")
                 {
-                    TempData["SuccessMessage"] = "You have already checked in for this session!";
+                    TempData["SuccessMessage"] = $"You have already checked in as Present for {session.SchoolClass?.ClassName}!";
                 }
                 else
                 {
                     record.Status = "Present";
                     record.MarkedAt = DateTime.Now;
+                    record.Remarks = "Checked in via 6-digit PIN code";
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = "You have successfully marked your attendance using the PIN!";
+                    TempData["SuccessMessage"] = $"Attendance registered successfully! You are marked Present for {session.SchoolClass?.ClassName} ({session.SessionType}).";
                 }
             }
             else
@@ -419,14 +477,15 @@ namespace AttendanceTrackingSystem.Controllers
                     SessionId = session.SessionId,
                     StudentId = student.StudentId,
                     Status = "Present",
-                    MarkedAt = DateTime.Now
+                    MarkedAt = DateTime.Now,
+                    Remarks = "Checked in via 6-digit PIN code"
                 };
                 _context.AttendanceRecords.Add(record);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "You have successfully marked your attendance using the PIN!";
+                TempData["SuccessMessage"] = $"Attendance registered successfully! You are marked Present for {session.SchoolClass?.ClassName} ({session.SessionType}).";
             }
 
-            return RedirectToAction("StudentHistory", "AttendanceReport", new { studentId = student.StudentId });
+            return RedirectToAction("Index", "Dashboard");
         }
 
         [HttpPost]
