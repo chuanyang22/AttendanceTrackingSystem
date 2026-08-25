@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -371,9 +371,9 @@ namespace AttendanceTrackingSystem.Controllers
             return View(session);
         }
 
-        // POST: Regenerate a new randomized 6-digit PIN code for a session
+                // POST: Regenerate a new randomized 6-digit PIN code for a session
         [HttpPost]
-        [Authorize(Roles = "Admin,Teacher")]
+        [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RegenerateCode(int id)
         {
@@ -513,6 +513,7 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
 
 
 

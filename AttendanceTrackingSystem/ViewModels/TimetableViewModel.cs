@@ -10,7 +10,9 @@ namespace AttendanceTrackingSystem.ViewModels
         public List<PublicHoliday> Holidays { get; set; } = new List<PublicHoliday>();
         
         // List of all timetable slots to render
-        public List<TimetableSlot> Slots { get; set; } = new List<TimetableSlot>();
+                public List<TimetableSlot> Slots { get; set; } = new List<TimetableSlot>();
+        public DateTime SemesterStartDate { get; set; } = new DateTime(2026, 8, 3); // August 3, 2026
+        public int CurrentWeekNumber => (int)((WeekStart - SemesterStartDate).TotalDays / 7) + 1;
     }
 
     public class TimetableSlot
@@ -24,4 +26,5 @@ namespace AttendanceTrackingSystem.ViewModels
         public string SessionType { get; set; } = "L"; // L, T, P
     }
 }
+
 

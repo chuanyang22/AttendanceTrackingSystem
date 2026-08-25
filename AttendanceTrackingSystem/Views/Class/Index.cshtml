@@ -1,12 +1,24 @@
-@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
+﻿@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
 
 @{
     ViewData["Title"] = "Classes";
+    var currentDay = ViewData["DayFilter"] as DayOfWeek?;
+    var days = Enum.GetValues(typeof(DayOfWeek)).Cast<DayOfWeek>().ToList();
+    var mondayFirst = days.Where(d => d != DayOfWeek.Sunday).ToList();
+    mondayFirst.Add(DayOfWeek.Sunday);
+    
+    bool isAdmin = User.IsInRole("Admin");
+
+    // Group classes for "All Days" view, preserving the Controller's sort order
+    var groupedClasses = Model.GroupBy(c => {
+        if (string.IsNullOrEmpty(c.Schedule)) return "Unscheduled";
+        return c.Schedule.Split(' ')[0];
+    }).ToList();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold mb-0">Classes</h2>
-    @if (User.IsInRole("Admin"))
+    @if (isAdmin)
     {
         <a asp-action="Create" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i> Add New Class
@@ -14,44 +26,105 @@
     }
 </div>
 
-<div class="card card-custom overflow-hidden">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Class</th>
-                    <th>Schedule</th>
-                    <th>Teacher</th>
-                    <th class="text-end">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model != null && Model.Any())
-                {
-                    @foreach (var item in Model)
-                    {
-                        <tr>
-                            <td class="fw-semibold">@item.ClassName</td>
-                            <td>@item.Schedule</td>
-                            <td>@item.Teacher?.FullName</td>
-                            <td class="text-end">
-                                <a asp-action="Details" asp-route-id="@item.ClassId" class="btn btn-outline-primary btn-sm rounded-2 me-1">Details</a>
-                                @if (User.IsInRole("Admin"))
-                                {
-                                    <a asp-action="Edit" asp-route-id="@item.ClassId" class="btn btn-outline-secondary btn-sm rounded-2 me-1">Edit</a>
-                                    <a asp-action="Delete" asp-route-id="@item.ClassId" class="btn btn-outline-danger btn-sm rounded-2">Delete</a>
-                                }
-                            </td>
-                        </tr>
-                    }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="4" class="text-center text-muted py-4">No classes found.</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+<!-- Day Filter Pills -->
+<div class="mb-4 overflow-auto">
+    <ul class="nav nav-pills flex-nowrap gap-2">
+        <li class="nav-item">
+            <a class="nav-link @(currentDay == null ? "active fw-bold shadow-sm" : "bg-white text-dark border")" 
+               asp-action="Index" 
+               asp-route-searchString="@ViewData["CurrentFilter"]"
+               asp-route-dayFilter="">All Days</a>
+        </li>
+        @foreach (var day in mondayFirst)
+        {
+            <li class="nav-item">
+                <a class="nav-link @(currentDay == day ? "active fw-bold shadow-sm" : "bg-white text-dark border")" 
+                   asp-action="Index" 
+                   asp-route-searchString="@ViewData["CurrentFilter"]"
+                   asp-route-dayFilter="@day">@day.ToString()</a>
+            </li>
+        }
+    </ul>
 </div>
+
+@if (Model != null && Model.Any())
+{
+    var groupsToRender = currentDay == null ? groupedClasses : new List<IGrouping<string, AttendanceTrackingSystem.Models.SchoolClass>> { groupedClasses.First() };
+
+    foreach (var group in groupsToRender)
+    {
+        @if (currentDay == null)
+        {
+            <h5 class="fw-bold mt-4 mb-3 text-primary border-bottom pb-2">@group.Key</h5>
+        }
+
+        <div class="card card-custom overflow-hidden mb-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="table-layout: fixed;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: @(isAdmin ? "20%" : "25%");">Time</th>
+                            <th style="width: @(isAdmin ? "40%" : "45%");">Class</th>
+                            <th style="width: @(isAdmin ? "25%" : "30%");">Teacher</th>
+                            @if (isAdmin)
+                            {
+                                <th class="text-end" style="width: 15%;">Actions</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in group)
+                        {
+                            string displayTime = item.Schedule ?? "";
+                            
+                            if (!string.IsNullOrEmpty(displayTime) && displayTime.Contains(" "))
+                            {
+                                var parts = displayTime.Split(' ');
+                                if (parts.Length > 1)
+                                {
+                                    displayTime = parts[1];
+                                    
+                                    if (displayTime.Contains("-"))
+                                    {
+                                        var tParts = displayTime.Split('-');
+                                        if (tParts.Length == 2 && TimeSpan.TryParse(tParts[0], out var st) && TimeSpan.TryParse(tParts[1], out var et))
+                                        {
+                                            displayTime = $"{DateTime.Today.Add(st):hh:mm tt} - {DateTime.Today.Add(et):hh:mm tt}";
+                                        }
+                                    }
+                                }
+                            }
+
+                            <tr style="cursor: pointer;" onclick="window.location.href='@Url.Action("Details", "Class", new { id = item.ClassId })'">
+                                <td>
+                                    <i class="bi bi-clock me-1 text-muted"></i>@displayTime
+                                </td>
+                                <td class="fw-semibold">
+                                    @item.ClassName <span class="text-muted fw-normal ms-1">(L)</span>
+                                </td>
+                                <td>@item.Teacher?.FullName</td>
+                                
+                                @if (isAdmin)
+                                {
+                                    <td class="text-end" onclick="event.stopPropagation();">
+                                        <a asp-action="Edit" asp-route-id="@item.ClassId" class="btn btn-outline-secondary btn-sm rounded-2 me-1">Edit</a>
+                                        <a asp-action="Delete" asp-route-id="@item.ClassId" class="btn btn-outline-danger btn-sm rounded-2">Delete</a>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="card card-custom overflow-hidden">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-calendar-x fs-1 d-block mb-3 opacity-50"></i>
+            No classes found for this selection.
+        </div>
+    </div>
+}

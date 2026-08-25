@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Data;
@@ -32,7 +32,7 @@ namespace AttendanceTrackingSystem.Controllers
                 query = query.Where(u => u.FullName.Contains(searchString) || u.Email.Contains(searchString));
                 ViewData["CurrentFilter"] = searchString;
             }
-            var users = await query.OrderByDescending(u => u.CreatedAt).ToListAsync();
+            var users = await query.OrderBy(u => u.Role).ThenBy(u => u.FullName).ToListAsync();
             return View(users);
         }
 

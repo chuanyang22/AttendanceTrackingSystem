@@ -1,4 +1,10 @@
-@model AttendanceTrackingSystem.Models.ViewModels.DashboardViewModel
+﻿@model AttendanceTrackingSystem.Models.ViewModels.DashboardViewModel
+
+<style>
+    .quick-access-btn:hover small.text-muted {
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+</style>
 
 @{
     ViewData["Title"] = "Dashboard";
@@ -7,7 +13,13 @@
 <div class="row mb-4">
     <div class="col-12">
         <h2 class="fw-bold">Welcome back, @Model.FullName!</h2>
-        <p class="text-muted">Role: <span class="badge bg-secondary">@Model.Role</span> | Overall Attendance Rate: <strong>@Model.OverallAttendanceRate%</strong></p>
+                <p class="text-muted">
+            Role: <span class="badge bg-secondary">@Model.Role</span>
+            @if (User.IsInRole("Student"))
+            {
+                <span>| Overall Attendance Rate: <strong>@Model.OverallAttendanceRate%</strong></span>
+            }
+        </p>
     </div>
 </div>
 
@@ -36,7 +48,7 @@
 
 @if (!User.IsInRole("Student"))
 {
-    var cardColClass = User.IsInRole("Admin") ? "col-md-3" : "col-md-4";
+    var cardColClass = "col-md-4";
 
     <!-- Quick Stat Cards -->
     <div class="row g-3 mb-4">
@@ -62,21 +74,24 @@
                 </div>
             </div>
         </div>
-        <div class="@cardColClass">
-            <div class="card shadow-sm border-0 bg-warning text-dark p-3 rounded-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-0 text-uppercase">@(User.IsInRole("Teacher") ? "My Sessions" : "Sessions")</h6>
-                        <h2 class="mt-2 mb-0 fw-bold">@Model.TotalSessions</h2>
+                @if (User.IsInRole("Teacher"))
+        {
+            <div class="@cardColClass">
+                <div class="card shadow-sm border-0 bg-warning text-dark p-3 rounded-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0 text-uppercase">@(User.IsInRole("Teacher") ? "My Sessions" : "Sessions")</h6>
+                            <h2 class="mt-2 mb-0 fw-bold">@Model.TotalSessions</h2>
+                        </div>
+                        <i class="bi bi-calendar-check fs-1 opacity-50"></i>
                     </div>
-                    <i class="bi bi-calendar-check fs-1 opacity-50"></i>
                 </div>
             </div>
-        </div>
+        }
         @* SYSTEM USERS IS ONLY VISIBLE TO ADMINISTRATORS - TEACHERS CANNOT SEE THIS *@
         @if (User.IsInRole("Admin"))
         {
-            <div class="col-md-3">
+            <div class="@cardColClass">
                 <div class="card shadow-sm border-0 bg-dark text-white p-3 rounded-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -186,51 +201,88 @@
 
 @if (!User.IsInRole("Student"))
 {
-    <!-- Charts Row -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0 p-3 h-100">
-                <h5 class="card-title fw-bold mb-3">Overall Attendance Distribution</h5>
-                <div style="height: 280px; position: relative;">
-                    <canvas id="attendancePieChart"></canvas>
+        <!-- Charts Row -->
+        @if (User.IsInRole("Admin"))
+    {
+        <!-- Admin Quick Access & Recent -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-7">
+                <div class="card shadow-sm border-0 p-4 h-100">
+                    <h5 class="fw-bold mb-4 text-primary"><i class="bi bi-grid-fill me-2"></i>Quick Access Features</h5>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <a asp-controller="User" asp-action="Index" class="btn btn-outline-dark quick-access-btn w-100 py-3 text-start d-flex align-items-center h-100 rounded-3">
+                                <div class="bg-dark text-white rounded p-2 me-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;"><i class="bi bi-people fs-4"></i></div>
+                                <div><div class="fw-bold fs-6">Manage Users</div><small class="text-muted">Add or edit accounts</small></div>
+                            </a>
+                        </div>
+                        <div class="col-sm-6">
+                            <a asp-controller="Class" asp-action="Index" class="btn btn-outline-success quick-access-btn w-100 py-3 text-start d-flex align-items-center h-100 rounded-3">
+                                <div class="bg-success text-white rounded p-2 me-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;"><i class="bi bi-easel fs-4"></i></div>
+                                <div><div class="fw-bold fs-6">Manage Classes</div><small class="text-muted">View all subjects</small></div>
+                            </a>
+                        </div>
+                        <div class="col-sm-6">
+                            <a asp-controller="Timetable" asp-action="Index" class="btn btn-outline-primary quick-access-btn w-100 py-3 text-start d-flex align-items-center h-100 rounded-3">
+                                <div class="bg-primary text-white rounded p-2 me-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;"><i class="bi bi-calendar3 fs-4"></i></div>
+                                <div><div class="fw-bold fs-6">Timetable</div><small class="text-muted">View Timetable</small></div>
+                            </a>
+                        </div>
+                        <div class="col-sm-6">
+                            <a asp-controller="AttendanceReport" asp-action="ClassReport" class="btn btn-outline-danger quick-access-btn w-100 py-3 text-start d-flex align-items-center h-100 rounded-3">
+                                <div class="bg-danger text-white rounded p-2 me-3 d-flex align-items-center justify-content-center" style="width:48px;height:48px;"><i class="bi bi-file-earmark-bar-graph fs-4"></i></div>
+                                <div><div class="fw-bold fs-6">Reports</div><small class="text-muted">Generate PDF logs</small></div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-5">
+                <div class="card shadow-sm border-0 p-4 h-100">
+                    <h5 class="fw-bold mb-4 text-warning"><i class="bi bi-clock-history me-2"></i>Recently Visited</h5>
+                    <div id="recentPagesContainer" class="list-group list-group-flush">
+                        <div class="text-center text-muted py-4">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div> Loading history...
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0 p-3 h-100">
-                <h5 class="card-title fw-bold mb-3">Attendance Overview Comparison</h5>
-                <div style="height: 280px; position: relative;">
-                    <canvas id="attendanceBarChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
+    }
 }
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script>
-        const present = @Model.PresentCount;
-        const absent = @Model.AbsentCount;
-        const excused = @Model.ExcusedCount;
-
-        // Doughnut / Pie Chart
-        var pieChartEl = document.getElementById('attendancePieChart');
-        if (pieChartEl) {
-            new Chart(pieChartEl, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Present', 'Absent', 'Excused'],
-                    datasets: [{
-                        data: [present, absent, excused],
-                        backgroundColor: ['#198754', '#dc3545', '#ffc107']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
+        document.addEventListener("DOMContentLoaded", function() {
+            const container = document.getElementById("recentPagesContainer");
+            if (container) {
+                try {
+                    let history = JSON.parse(localStorage.getItem("ats_recent_pages") || "[]");
+                    
+                    if (history.length === 0) {
+                        container.innerHTML = `<div class="text-center text-muted py-4"><i class="bi bi-journal-x fs-1 d-block mb-2 opacity-25"></i>No recent pages yet.</div>`;
+                    } else {
+                        container.innerHTML = history.map(p => 
+                            `<a href="` + p.url + `" class="list-group-item list-group-item-action d-flex align-items-center py-3 border-0 border-bottom">
+                                <i class="bi bi-link-45deg fs-4 text-muted me-3"></i>
+                                <div>
+                                    <div class="fw-semibold text-dark">` + p.title + `</div>
+                                    <small class="text-muted">` + p.url + `</small>
+                                </div>
+                                <i class="bi bi-chevron-right ms-auto text-muted opacity-50"></i>
+                            </a>`
+                        ).join('');
+                    }
+                } catch (e) {
+                    container.innerHTML = `<div class="text-danger py-2">Could not load history.</div>`;
                 }
-            });
+            }
+        });
+    </script>
+    <script>
+        
         }
 
         // Bar Chart (Only for non-students)
@@ -257,3 +309,13 @@
         }
     </script>
 }
+
+
+
+
+
+
+
+
+
+

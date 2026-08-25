@@ -1,4 +1,4 @@
-@model IEnumerable<AttendanceTrackingSystem.Models.User>
+﻿@model IEnumerable<AttendanceTrackingSystem.Models.User>
 
 @{
     var currentRole = ViewData["CurrentRole"]?.ToString();
@@ -25,11 +25,11 @@
             <input type="hidden" name="role" value="@currentRole" />
         }
         <input type="text" name="searchString" value="@ViewData["CurrentFilter"]" class="form-control" placeholder="Search by name or email..." />
-        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i> Search</button>
-        @if (ViewData["CurrentFilter"] != null)
+                @if (ViewData["CurrentFilter"] != null)
         {
             <a asp-action="Index" asp-route-role="@currentRole" class="btn btn-outline-danger">Clear</a>
         }
+        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i> Search</button>
     </div>
 </form>
 
@@ -109,3 +109,4 @@
         }, 15000);
     </script>
 }
+

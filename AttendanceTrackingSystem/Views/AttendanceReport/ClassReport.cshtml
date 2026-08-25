@@ -20,7 +20,20 @@
         </select>
     </div>
     <div class="col-md-3">
-        <input type="number" name="year" class="form-control" value="@ViewData["SelectedYear"]" />
+                <select name="year" class="form-select">
+            @{
+                int currentYear = DateTime.Now.Year;
+                int selectedYear = (int)(ViewData["SelectedYear"] ?? currentYear);
+                for (int y = currentYear - 10; y <= currentYear + 10; y++)
+                {
+                    if (y == selectedYear) {
+                        <option value="@y" selected>@y</option>
+                    } else {
+                        <option value="@y">@y</option>
+                    }
+                }
+            }
+        </select>
     </div>
     <div class="col-md-2">
         <button type="submit" class="btn btn-primary w-100">Filter</button>
@@ -31,7 +44,7 @@
 {
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>Class: @Model.ClassName (Teacher: @Model.TeacherName)</h3>
-        <a asp-action="PrintReport" asp-route-classId="@Model.ClassId" asp-route-month="@Model.Month" asp-route-year="@Model.Year" target="_blank" class="btn btn-outline-secondary">ðŸ–¨ï¸ Printable PDF View</a>
+        <a asp-action="PrintReport" asp-route-classId="@Model.ClassId" asp-route-month="@Model.Month" asp-route-year="@Model.Year" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-printer me-1"></i> Printable PDF View</a>
     </div>
 
     <table class="table table-bordered table-striped align-middle">
@@ -65,3 +78,4 @@
         </tbody>
     </table>
 }
+

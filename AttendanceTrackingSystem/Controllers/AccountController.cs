@@ -1,9 +1,10 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using AttendanceTrackingSystem.Services;
 using AttendanceTrackingSystem.Data;
 using AttendanceTrackingSystem.Models;
 using AttendanceTrackingSystem.Models.ViewModels;
@@ -13,13 +14,15 @@ namespace AttendanceTrackingSystem.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly ApplicationDbContext _context;
+                private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly AttendanceTrackingSystem.Services.IEmailService _emailService;
 
-        public AccountController(ApplicationDbContext context, IWebHostEnvironment environment)
+        public AccountController(ApplicationDbContext context, IWebHostEnvironment environment, AttendanceTrackingSystem.Services.IEmailService emailService)
         {
             _context = context;
             _environment = environment;
+            _emailService = emailService;
         }
 
         // GET: /Account/Login
@@ -119,7 +122,7 @@ namespace AttendanceTrackingSystem.Controllers
             return View();
         }
 
-        // POST: /Account/ForgotPassword
+                // POST: /Account/ForgotPassword
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
@@ -129,19 +132,53 @@ namespace AttendanceTrackingSystem.Controllers
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
             if (user != null)
             {
-                // Generate a unique token for reset verification
-                var resetToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray())
-                    .Replace("+", "").Replace("/", "").Replace("=", "");
+                var random = new Random();
+                var pinCode = random.Next(100000, 999999).ToString();
 
-                TempData[$"ResetToken_{model.Email.ToLower()}"] = resetToken;
-                TempData[$"ResetExpiry_{model.Email.ToLower()}"] = DateTime.UtcNow.AddMinutes(15).ToString("o");
+                user.ResetToken = pinCode;
+                user.ResetTokenExpiry = DateTime.UtcNow.AddMinutes(15);
+                await _context.SaveChangesAsync();
 
-                // Route the user to the reset page with their token
-                return RedirectToAction(nameof(ResetPassword), new { token = resetToken, email = model.Email });
+                await _emailService.SendPasswordResetPinAsync(user.Email, user.FullName, pinCode);
+
+                TempData["SuccessMessage"] = "A 6-digit PIN has been sent to your email.";
+                return RedirectToAction(nameof(VerifyPin), new { email = model.Email });
             }
 
-            TempData["SuccessMessage"] = "If an account exists with that email, a password reset link has been processed.";
-            return RedirectToAction(nameof(Login));
+            TempData["SuccessMessage"] = "If an account with that email exists, we have sent a password reset PIN.";
+            return RedirectToAction(nameof(VerifyPin), new { email = model.Email });
+        }
+
+        // GET: /Account/VerifyPin
+        [HttpGet]
+        public IActionResult VerifyPin(string email)
+        {
+            if (string.IsNullOrEmpty(email)) return RedirectToAction(nameof(Login));
+            return View(new AttendanceTrackingSystem.Models.ViewModels.VerifyPinViewModel { Email = email });
+        }
+
+        // POST: /Account/VerifyPin
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerifyPin(AttendanceTrackingSystem.Models.ViewModels.VerifyPinViewModel model)
+        {
+            if (!ModelState.IsValid) return View(model);
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
+            if (user != null)
+            {
+                if (user.ResetToken == model.PinCode && user.ResetTokenExpiry.HasValue && user.ResetTokenExpiry.Value > DateTime.UtcNow)
+                {
+                    var secureToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray()).Replace("+", "").Replace("/", "").Replace("=", "");
+                    user.ResetToken = secureToken;
+                    await _context.SaveChangesAsync();
+
+                    return RedirectToAction(nameof(ResetPassword), new { token = secureToken, email = model.Email });
+                }
+            }
+
+            ModelState.AddModelError("PinCode", "Invalid or expired PIN code.");
+            return View(model);
         }
 
         // GET: /Account/ResetPassword
@@ -154,38 +191,28 @@ namespace AttendanceTrackingSystem.Controllers
                 return RedirectToAction(nameof(Login));
             }
 
-            TempData.Keep();
             return View(new ResetPasswordViewModel { Token = token, Email = email });
         }
 
-        // POST: /Account/ResetPassword
+                // POST: /Account/ResetPassword
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
         {
-            TempData.Keep();
-
             if (!ModelState.IsValid) return View(model);
 
-            var savedToken = TempData[$"ResetToken_{model.Email.ToLower()}"]?.ToString();
-            var expiryStr = TempData[$"ResetExpiry_{model.Email.ToLower()}"]?.ToString();
-
-            if (string.IsNullOrEmpty(savedToken) || savedToken != model.Token ||
-                !DateTime.TryParse(expiryStr, out var expiry) || DateTime.UtcNow > expiry)
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
+            if (user == null || user.ResetToken != model.Token || !user.ResetTokenExpiry.HasValue || user.ResetTokenExpiry.Value < DateTime.UtcNow)
             {
                 ModelState.AddModelError(string.Empty, "The reset token has expired or is invalid. Please submit a new request.");
                 return View(model);
             }
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
-            if (user == null)
-            {
-                return RedirectToAction(nameof(Login));
-            }
-
-            user.PasswordHash = PasswordHelper.HashPassword(model.NewPassword);
+            user.PasswordHash = AttendanceTrackingSystem.Services.PasswordHelper.HashPassword(model.NewPassword);
             user.FailedLoginAttempts = 0;
             user.LockoutEndUtc = null;
+            user.ResetToken = null;
+            user.ResetTokenExpiry = null;
             await _context.SaveChangesAsync();
 
             TempData.Remove($"ResetToken_{model.Email.ToLower()}");
@@ -285,3 +312,8 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
+
+
+
+

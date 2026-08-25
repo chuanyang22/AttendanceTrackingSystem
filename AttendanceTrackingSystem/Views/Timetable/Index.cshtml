@@ -1,4 +1,4 @@
-@model AttendanceTrackingSystem.ViewModels.TimetableViewModel
+﻿@model AttendanceTrackingSystem.ViewModels.TimetableViewModel
 @{
     ViewData["Title"] = "Timetable";
     var hours = Enumerable.Range(8, 14).ToList(); // 8 AM to 9 PM
@@ -7,7 +7,7 @@
 <style>
 .timetable-grid {
     display: grid;
-    grid-template-columns: 120px repeat(14, 1fr);
+    grid-template-columns: 120px repeat(28, 1fr); /* 28 slots for 30-min intervals */
     gap: 1px;
     background: #dee2e6;
     border: 1px solid #dee2e6;
@@ -59,12 +59,32 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold mb-0 text-primary">Timetable</h2>
     <div class="d-flex gap-2 align-items-center">
+        <!-- Week Selector Dropdown -->
+        <div class="dropdown me-2">
+            <button class="btn btn-primary dropdown-toggle fw-semibold" type="button" id="weekDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                Week @Model.CurrentWeekNumber
+            </button>
+            <ul class="dropdown-menu shadow" aria-labelledby="weekDropdown" style="max-height: 300px; overflow-y: auto;">
+                @for (int w = 1; w <= 14; w++)
+                {
+                    var weekStartDate = Model.SemesterStartDate.AddDays((w - 1) * 7);
+                    <li>
+                        <a class="dropdown-item @(w == Model.CurrentWeekNumber ? "active fw-bold" : "")" 
+                           asp-action="Index" 
+                           asp-route-weekDate="@weekStartDate.ToString("yyyy-MM-dd")">
+                            Week @w <small class="text-muted ms-2">(@weekStartDate.ToString("dd MMM"))</small>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+
         <a asp-action="Index" asp-route-weekDate="@Model.WeekStart.AddDays(-7).ToString("yyyy-MM-dd")" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-chevron-left"></i> Prev Week
+            <i class="bi bi-chevron-left"></i> Prev
         </a>
         <span class="fw-bold mx-2">@Model.WeekStart.ToString("dd MMM yyyy") - @Model.WeekEnd.ToString("dd MMM yyyy")</span>
         <a asp-action="Index" asp-route-weekDate="@Model.WeekStart.AddDays(7).ToString("yyyy-MM-dd")" class="btn btn-outline-secondary btn-sm">
-            Next Week <i class="bi bi-chevron-right"></i>
+            Next <i class="bi bi-chevron-right"></i>
         </a>
     </div>
 </div>
@@ -74,7 +94,7 @@
     <div class="tt-header" style="background: #e9ecef; grid-row: 1; grid-column: 1;">Day / Time</div>
     @foreach(var h in hours)
     {
-        <div class="tt-header" style="grid-row: 1; grid-column: @(hours.IndexOf(h) + 2);">
+        <div class="tt-header" style="grid-row: 1; grid-column: @((hours.IndexOf(h) * 2) + 2) / span 2;">
             @(h > 12 ? (h - 12).ToString("D2") : h.ToString("D2")):00 <br />
             <small class="text-muted">@(h >= 12 ? "PM" : "AM")</small>
         </div>
@@ -99,10 +119,10 @@
             }
         </div>
         
-        <!-- Empty background cells for the row -->
-        @foreach(var h in hours)
+        <!-- Empty background cells for the row (30 min intervals) -->
+        @for (int i = 0; i < 28; i++)
         {
-            <div class="tt-cell" style="grid-column: @(hours.IndexOf(h) + 2); grid-row: @rowIndex;"></div>
+            <div class="tt-cell" style="grid-column: @(i + 2); grid-row: @rowIndex; border-right: @(i % 2 == 1 ? "1px solid #dee2e6" : "1px dashed #e9ecef");"></div>
         }
     }
     
@@ -112,18 +132,22 @@
         int dayIndex = (int)(slot.Date.Date - Model.WeekStart.Date).TotalDays;
         int rowStart = dayIndex + 2; // +1 for 1-indexed grid, +1 to skip header row
         
-        int colStart = slot.StartTime.Hours - 8 + 2; // +1 for 1-indexed grid, +1 to skip day column
-        int colEnd = slot.EndTime.Hours - 8 + 2;
+        // Convert time to half-hour slots
+        double startHourOffset = slot.StartTime.TotalHours - 8.0;
+        double endHourOffset = slot.EndTime.TotalHours - 8.0;
+
+        int colStart = (int)Math.Round(startHourOffset * 2) + 2;
+        int colEnd = (int)Math.Round(endHourOffset * 2) + 2;
         
         if (colStart < 2) colStart = 2; // bound checks
-        if (colEnd > 16) colEnd = 16;
+        if (colEnd > 30) colEnd = 30; // 28 intervals + 2
         
         string bgClass = "bg-regular";
         string statusText = "";
         if (slot.Status == "Replacement") 
         {
             bgClass = "bg-replacement";
-            statusText = $"(Replaced class for {slot.Date:yyyy-MM-dd})";
+            statusText = $"(Replaced for {slot.Date:dd MMM})";
         }
         else if (slot.Status == "Cancelled")
         {
@@ -131,7 +155,7 @@
             statusText = "(Cancelled)";
         }
 
-        string timeStr = $"{(slot.StartTime.Hours > 12 ? slot.StartTime.Hours-12 : slot.StartTime.Hours):00}:{(slot.StartTime.Minutes):00} {(slot.StartTime.Hours >= 12 ? "PM" : "AM")} - {(slot.EndTime.Hours > 12 ? slot.EndTime.Hours-12 : slot.EndTime.Hours):00}:{(slot.EndTime.Minutes):00} {(slot.EndTime.Hours >= 12 ? "PM" : "AM")}";
+        string timeStr = $"{(slot.StartTime.Hours > 12 ? slot.StartTime.Hours-12 : (slot.StartTime.Hours == 0 ? 12 : slot.StartTime.Hours)):00}:{(slot.StartTime.Minutes):00} {(slot.StartTime.Hours >= 12 ? "PM" : "AM")} - {(slot.EndTime.Hours > 12 ? slot.EndTime.Hours-12 : (slot.EndTime.Hours == 0 ? 12 : slot.EndTime.Hours)):00}:{(slot.EndTime.Minutes):00} {(slot.EndTime.Hours >= 12 ? "PM" : "AM")}";
 
         <div class="tt-event @bgClass" style="grid-row: @rowStart; grid-column: @colStart / @colEnd;">
             <strong class="d-block mb-1">@slot.ClassName (@slot.SessionType)</strong>
@@ -139,9 +163,8 @@
             <span class="d-block">@timeStr</span>
             @if(!string.IsNullOrEmpty(statusText))
             {
-                <span class="d-block small mt-1">@statusText</span>
+                <span class="d-block small mt-1 fw-semibold">@statusText</span>
             }
         </div>
     }
 </div>
-

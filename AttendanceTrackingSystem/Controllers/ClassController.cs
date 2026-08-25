@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -29,7 +29,7 @@ namespace AttendanceTrackingSystem.Controllers
 
         // GET: Class
         [HttpGet]
-        public async Task<IActionResult> Index(string searchString)
+                public async Task<IActionResult> Index(string searchString, DayOfWeek? dayFilter)
         {
             var classes = _context.SchoolClasses.Include(c => c.Teacher).AsQueryable();
 
@@ -53,9 +53,37 @@ namespace AttendanceTrackingSystem.Controllers
                                            || (c.Teacher != null && c.Teacher.FullName.Contains(searchString)));
             }
 
-            ViewData["CurrentFilter"] = searchString;
+                        ViewData["CurrentFilter"] = searchString;
+            ViewData["DayFilter"] = dayFilter;
 
-            var result = await classes.ToListAsync();
+            if (dayFilter.HasValue)
+            {
+                string dayString = dayFilter.Value.ToString();
+                classes = classes.Where(c => c.Schedule != null && c.Schedule.StartsWith(dayString));
+            }
+
+                        var result = await classes.ToListAsync();
+
+            // Sort by Day (Monday-first) then by Time
+            result = result.OrderBy(c => 
+            {
+                if (string.IsNullOrEmpty(c.Schedule)) return 8;
+                var parts = c.Schedule.Split(' ');
+                if (parts.Length > 0 && Enum.TryParse<DayOfWeek>(parts[0], out var day))
+                {
+                    int dayValue = (int)day;
+                    return dayValue == 0 ? 7 : dayValue; // Monday=1...Sunday=7
+                }
+                return 8;
+            })
+            .ThenBy(c => 
+            {
+                if (string.IsNullOrEmpty(c.Schedule)) return "";
+                var parts = c.Schedule.Split(' ');
+                if (parts.Length > 1) return parts[1];
+                return "";
+            })
+            .ToList();
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
@@ -217,3 +245,5 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
+

@@ -1,0 +1,40 @@
+﻿@model AttendanceTrackingSystem.Models.ViewModels.VerifyPinViewModel
+
+@{
+    ViewData["Title"] = "Verify PIN";
+    Layout = "_LayoutAuth";
+}
+
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+    <div class="row g-0">
+        <div class="col-md-5 d-none d-md-block bg-primary p-4 d-flex flex-column justify-content-center text-white">
+            <h3 class="fw-bold mb-3">Check Your Email</h3>
+            <p class="opacity-75 mb-0">We have sent a 6-digit PIN code to your email address. Enter it here to reset your password.</p>
+        </div>
+        <div class="col-md-7 p-4 p-md-5">
+            <div class="text-center mb-4">
+                <i class="bi bi-shield-lock-fill text-primary mb-2" style="font-size: 3rem;"></i>
+                <h4 class="fw-bold">Enter PIN Code</h4>
+                <p class="text-muted small">Code sent to @Model.Email</p>
+            </div>
+
+            <form asp-controller="Account" asp-action="VerifyPin" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Email" />
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3 text-center"></div>
+
+                <div class="form-floating mb-4">
+                    <input asp-for="PinCode" class="form-control text-center fs-3 fw-bold tracking-wider" placeholder="123456" maxlength="6" autocomplete="off" />
+                    <label asp-for="PinCode">6-Digit PIN</label>
+                    <span asp-validation-for="PinCode" class="text-danger small mt-1 d-block text-start"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2 mb-3 fw-semibold">Verify PIN</button>
+                
+                <div class="text-center">
+                    <a asp-action="ForgotPassword" class="text-decoration-none small">Didn't receive the code? Try again</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

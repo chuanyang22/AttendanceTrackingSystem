@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -122,7 +122,7 @@ namespace AttendanceTrackingSystem.Controllers
 
             if (!classId.HasValue) return View(null);
 
-            var schoolClass = await _context.SchoolClasses.FindAsync(classId.Value);
+            var schoolClass = await _context.SchoolClasses.Include(c => c.Teacher).FirstOrDefaultAsync(c => c.ClassId == classId.Value);
             if (schoolClass == null) return NotFound();
 
             var sessions = await _context.AttendanceSessions
@@ -180,9 +180,9 @@ namespace AttendanceTrackingSystem.Controllers
             return View(reportModel);
         }
 
-        private async Task<ClassAttendanceReportViewModel?> ClassReportDataAsync(int classId, int month, int year)
+                private async Task<ClassAttendanceReportViewModel?> ClassReportDataAsync(int classId, int month, int year)
         {
-            var schoolClass = await _context.SchoolClasses.FindAsync(classId);
+            var schoolClass = await _context.SchoolClasses.Include(c => c.Teacher).FirstOrDefaultAsync(c => c.ClassId == classId);
             if (schoolClass == null) return null;
 
             var sessions = await _context.AttendanceSessions
@@ -224,3 +224,5 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
+

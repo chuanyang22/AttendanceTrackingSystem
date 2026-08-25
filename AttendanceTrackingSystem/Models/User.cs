@@ -32,6 +32,9 @@ namespace AttendanceTrackingSystem.Models
         public int FailedLoginAttempts { get; set; } = 0;
         public DateTime? LockoutEndUtc { get; set; }
 
+        public string? ResetToken { get; set; }
+        public DateTime? ResetTokenExpiry { get; set; }
+
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
