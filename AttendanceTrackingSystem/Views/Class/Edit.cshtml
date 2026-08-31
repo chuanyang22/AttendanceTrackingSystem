@@ -1,4 +1,4 @@
-﻿@model AttendanceTrackingSystem.Models.SchoolClass
+@model AttendanceTrackingSystem.Models.SchoolClass
 
 @{
     ViewData["Title"] = "Edit Class";
@@ -16,7 +16,16 @@
         <span asp-validation-for="ClassName" class="text-danger"></span>
     </div>
 
-    
+    <div class="form-group mb-3">
+        <label asp-for="ClassType">Class Type</label>
+        <select asp-for="ClassType" class="form-select">
+            <option value="">-- Select Type --</option>
+            <option value="Lecture">Lecture</option>
+            <option value="Tutorial">Tutorial</option>
+            <option value="Practical">Practical</option>
+        </select>
+        <span asp-validation-for="ClassType" class="text-danger"></span>
+    </div>
 
     <div class="form-group mb-3">
         <label asp-for="Schedule">Schedule</label>

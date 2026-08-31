@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -287,6 +287,8 @@ namespace AttendanceTrackingSystem.Controllers
                   .Include(s => s.AttendanceRecords)
                       .ThenInclude(r => r.Student)
                   .FirstOrDefaultAsync(s => s.SessionId == id);
+
+                if (session == null) return NotFound();
             }
 
             // For Admin/Teacher: show all enrolled students

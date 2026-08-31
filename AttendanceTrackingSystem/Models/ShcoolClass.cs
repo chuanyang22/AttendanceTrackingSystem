@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace AttendanceTrackingSystem.Models
 {
@@ -11,7 +11,8 @@ namespace AttendanceTrackingSystem.Models
         [StringLength(100)]
         public string ClassName { get; set; } = string.Empty;
 
-        
+        [StringLength(50)]
+        public string? ClassType { get; set; } // e.g. Lecture, Practical, Tutorial
 
         [StringLength(100)]
         public string? Schedule { get; set; }
