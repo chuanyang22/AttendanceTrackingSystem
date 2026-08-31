@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -56,7 +56,7 @@ namespace AttendanceTrackingSystem.Controllers
             else if (User.IsInRole("Student"))
             {
                 var email = User.FindFirstValue(ClaimTypes.Email)?.ToLower();
-                query = query.Where(s => s.SchoolClass != null && s.SchoolClass.Enrollments.Any(e => e.Student.Email.ToLower() == email));
+                query = query.Where(predicate: s => s.SchoolClass != null && s.SchoolClass.Enrollments.Any(e => e.Student != null && e.Student.Email != null && e.Student.Email.ToLower() == email));
             }
 
             if (classId.HasValue)
@@ -65,6 +65,8 @@ namespace AttendanceTrackingSystem.Controllers
             }
 
             var allowedClasses = await GetAllowedClasses().OrderBy(c => c.ClassName).ToListAsync();
+
+            
             ViewData["ClassId"] = new SelectList(allowedClasses, "ClassId", "ClassName", classId);
             
             var sessions = await query.OrderByDescending(s => s.SessionDate).ToListAsync();
@@ -234,7 +236,7 @@ namespace AttendanceTrackingSystem.Controllers
         {
             var session = await _context.AttendanceSessions
                 .Include(s => s.SchoolClass)
-                    .ThenInclude(c => c.Teacher)
+                    .ThenInclude(c => c!.Teacher)
                 .Include(s => s.AttendanceRecords)
                     .ThenInclude(r => r.Student)
                 .FirstOrDefaultAsync(s => s.SessionId == id);

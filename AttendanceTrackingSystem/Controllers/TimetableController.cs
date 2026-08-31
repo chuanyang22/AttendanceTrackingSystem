@@ -1,4 +1,4 @@
-﻿using AttendanceTrackingSystem.Data;
+using AttendanceTrackingSystem.Data;
 using AttendanceTrackingSystem.Models;
 using AttendanceTrackingSystem.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -36,15 +36,15 @@ namespace AttendanceTrackingSystem.Controllers
                 var student = await _context.Students
                     .Include(s => s.Enrollments)
                         .ThenInclude(e => e.SchoolClass)
-                            .ThenInclude(c => c.Teacher)
+                            .ThenInclude(c => c!.Teacher)
                     .Include(s => s.Enrollments)
                         .ThenInclude(e => e.SchoolClass)
-                            .ThenInclude(c => c.AttendanceSessions)
+                            .ThenInclude(c => c!.AttendanceSessions)
                     .FirstOrDefaultAsync(s => s.Email.ToLower() == userEmail);
 
                 if (student != null)
                 {
-                    classes = student.Enrollments.Select(e => e.SchoolClass).ToList();
+                    classes = student.Enrollments.Where(e => e.SchoolClass != null).Select(e => e.SchoolClass!).ToList();
                 }
             }
             else if (userRole == "Teacher")

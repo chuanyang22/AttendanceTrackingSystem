@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -161,7 +161,7 @@ namespace AttendanceTrackingSystem.Controllers
             {
                 ClassId = schoolClass.ClassId,
                 ClassName = schoolClass.ClassName,
-                TeacherName = schoolClass.Teacher?.FullName,
+                TeacherName = schoolClass.Teacher?.FullName ?? "Unknown",
                 Month = selectedMonth,
                 Year = selectedYear,
                 TotalSessions = sessions.Count,
@@ -215,7 +215,7 @@ namespace AttendanceTrackingSystem.Controllers
             {
                 ClassId = schoolClass.ClassId,
                 ClassName = schoolClass.ClassName,
-                TeacherName = schoolClass.Teacher?.FullName,
+                TeacherName = schoolClass.Teacher?.FullName ?? "Unknown",
                 Month = month,
                 Year = year,
                 TotalSessions = sessions.Count,

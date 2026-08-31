@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Data;
@@ -134,10 +134,22 @@ namespace AttendanceTrackingSystem.Controllers
 
             if (ModelState.IsValid)
             {
+                var oldEmail = existingUser.Email;
                 existingUser.FullName = model.FullName;
                 existingUser.Email = model.Email;
                 existingUser.Role = model.Role;
                 existingUser.IsActive = model.IsActive;
+
+                if (existingUser.Role == "Student")
+                {
+                    var student = await _context.Students.FirstOrDefaultAsync(s => s.Email == oldEmail);
+                    if (student != null)
+                    {
+                        student.Name = model.FullName;
+                        student.Email = model.Email;
+                        _context.Students.Update(student);
+                    }
+                }
 
                 // Update password only if provided
                 if (!string.IsNullOrWhiteSpace(newPassword))
