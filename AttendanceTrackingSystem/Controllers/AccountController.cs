@@ -94,7 +94,7 @@ namespace AttendanceTrackingSystem.Controllers
                 new Claim(ClaimTypes.Name, user.FullName),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role),
-                new Claim("ProfilePicture", user.ProfilePictureUrl ?? "/uploads/avatars/default-avatar.png")
+                new Claim("ProfilePicture", user.ProfilePictureUrl ?? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(user.FullName)}&background=random&color=fff")
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -284,7 +284,7 @@ namespace AttendanceTrackingSystem.Controllers
                 new Claim(ClaimTypes.Name, user.FullName),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role),
-                new Claim("ProfilePicture", user.ProfilePictureUrl ?? "/uploads/avatars/default-avatar.png")
+                new Claim("ProfilePicture", user.ProfilePictureUrl ?? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(user.FullName)}&background=random&color=fff")
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -312,6 +312,7 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
 
 
 
