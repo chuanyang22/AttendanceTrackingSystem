@@ -1,4 +1,4 @@
-﻿@model AttendanceTrackingSystem.Models.User
+@model AttendanceTrackingSystem.Models.User
 
 @{
     ViewData["Title"] = "Edit User";
@@ -80,5 +80,28 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        function togglePassword() {
+            var input = document.getElementById("newPassword");
+            var icon = document.getElementById("toggleIcon");
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove("bi-eye");
+                icon.classList.add("bi-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.remove("bi-eye-slash");
+                icon.classList.add("bi-eye");
+            }
+        }
+
+        function hoverPassword() {
+            // Optional: You can add hover effects here if desired
+        }
+
+        function unhoverPassword() {
+            // Optional: You can add unhover effects here if desired
+        }
+    </script>
 }
 

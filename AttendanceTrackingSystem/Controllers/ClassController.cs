@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -44,7 +44,7 @@ namespace AttendanceTrackingSystem.Controllers
             else if (User.IsInRole("Student"))
             {
                 var email = User.FindFirstValue(ClaimTypes.Email)?.ToLower();
-                classes = classes.Where(c => c.Enrollments.Any(e => e.Student.Email.ToLower() == email));
+                classes = classes.Where(c => c.Enrollments.Any(e => e.Student != null && e.Student.Email != null && e.Student.Email.ToLower() == email));
             }
 
             if (!string.IsNullOrEmpty(searchString))
@@ -103,7 +103,7 @@ namespace AttendanceTrackingSystem.Controllers
                 .Include(c => c.Teacher)
                 .Include(c => c.Enrollments)
                     .ThenInclude(e => e.Student)
-                        .ThenInclude(s => s.AttendanceRecords)
+                        .ThenInclude(s => s!.AttendanceRecords)
                             .ThenInclude(ar => ar.AttendanceSession)
                 .Include(c => c.AttendanceSessions)
                 .FirstOrDefaultAsync(c => c.ClassId == id);

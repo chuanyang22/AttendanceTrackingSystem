@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +8,6 @@ using AttendanceTrackingSystem.Services;
 using AttendanceTrackingSystem.Data;
 using AttendanceTrackingSystem.Models;
 using AttendanceTrackingSystem.Models.ViewModels;
-using AttendanceTrackingSystem.Services;
 
 namespace AttendanceTrackingSystem.Controllers
 {
@@ -257,6 +256,16 @@ namespace AttendanceTrackingSystem.Controllers
             if (user == null) return NotFound();
 
             user.FullName = model.FullName;
+
+            if (user.Role == "Student")
+            {
+                var student = await _context.Students.FirstOrDefaultAsync(s => s.Email == user.Email);
+                if (student != null)
+                {
+                    student.Name = model.FullName;
+                    _context.Students.Update(student);
+                }
+            }
 
             // Handle updated photo
             if (model.NewProfileImage != null && model.NewProfileImage.Length > 0)
