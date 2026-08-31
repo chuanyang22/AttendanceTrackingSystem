@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -258,6 +258,37 @@ namespace AttendanceTrackingSystem.Controllers
 
             
 
+            // Sync any newly enrolled students into this session before rendering
+            var enrolledStudentIds = await _context.Enrollments
+                .Where(e => e.ClassId == session.ClassId)
+                .Select(e => e.StudentId)
+                .ToListAsync();
+
+            var existingRecordStudentIds = session.AttendanceRecords.Select(r => r.StudentId).ToList();
+            var missingStudentIds = enrolledStudentIds.Except(existingRecordStudentIds).ToList();
+
+            if (missingStudentIds.Any())
+            {
+                foreach (var missingId in missingStudentIds)
+                {
+                    _context.AttendanceRecords.Add(new AttendanceRecord
+                    {
+                        SessionId = session.SessionId,
+                        StudentId = missingId,
+                        Status = "Pending"
+                    });
+                }
+                await _context.SaveChangesAsync();
+                
+                // Reload session to populate the new Student navigation properties
+                session = await _context.AttendanceSessions
+                  .Include(s => s.SchoolClass)
+                      .ThenInclude(c => c!.Teacher)
+                  .Include(s => s.AttendanceRecords)
+                      .ThenInclude(r => r.Student)
+                  .FirstOrDefaultAsync(s => s.SessionId == id);
+            }
+
             // For Admin/Teacher: show all enrolled students
             var viewModel = new MarkAttendanceViewModel
             {
@@ -515,6 +546,7 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
 
 
 

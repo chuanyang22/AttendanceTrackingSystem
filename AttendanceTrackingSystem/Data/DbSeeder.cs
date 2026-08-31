@@ -1,4 +1,4 @@
-using AttendanceTrackingSystem.Models;
+﻿using AttendanceTrackingSystem.Models;
 using AttendanceTrackingSystem.Services;
 
 namespace AttendanceTrackingSystem.Data
@@ -7,12 +7,12 @@ namespace AttendanceTrackingSystem.Data
     {
         public static void Seed(ApplicationDbContext context)
         {
-            if (!context.Users.Any(u => u.Email == "admin@example.com"))
+            if (!context.Users.Any(u => u.Email == "teecy-wm25@student.tarc.edu.my"))
             {
                 var adminUser = new User
                 {
                     FullName = "System Administrator",
-                    Email = "admin@example.com",
+                    Email = "teecy-wm25@student.tarc.edu.my",
                     PasswordHash = PasswordHelper.HashPassword("Admin123!"),
                     Role = "Admin",
                     IsActive = true,
@@ -21,12 +21,12 @@ namespace AttendanceTrackingSystem.Data
                 context.Users.Add(adminUser);
             }
 
-            if (!context.Users.Any(u => u.Email == "teacher@example.com"))
+            if (!context.Users.Any(u => u.Email == "tiesw-wm25@student.tarc.edu.my"))
             {
                 var teacherUser = new User
                 {
                     FullName = "Default Teacher",
-                    Email = "teacher@example.com",
+                    Email = "tiesw-wm25@student.tarc.edu.my",
                     PasswordHash = PasswordHelper.HashPassword("Teacher123!"),
                     Role = "Teacher",
                     IsActive = true,
@@ -35,12 +35,12 @@ namespace AttendanceTrackingSystem.Data
                 context.Users.Add(teacherUser);
             }
 
-            if (!context.Users.Any(u => u.Email == "student@example.com"))
+            if (!context.Users.Any(u => u.Email == "shivendrat@student.tarc.edu.my"))
             {
                 var studentUser = new User
                 {
                     FullName = "Default Student",
-                    Email = "student@example.com",
+                    Email = "shivendrat@student.tarc.edu.my",
                     PasswordHash = PasswordHelper.HashPassword("Student123!"),
                     Role = "Student",
                     IsActive = true,
@@ -49,7 +49,25 @@ namespace AttendanceTrackingSystem.Data
                 context.Users.Add(studentUser);
             }
 
+            
+            var studentUsers = context.Users.Where(u => u.Role == "Student").ToList();
+            foreach (var su in studentUsers)
+            {
+                if (!context.Students.Any(s => s.Email == su.Email))
+                {
+                    context.Students.Add(new Student
+                    {
+                        Name = su.FullName,
+                        Email = su.Email,
+                        Phone = "0000000000",
+                        Status = "Active"
+                    });
+                }
+            }
+
             context.SaveChanges();
         }
     }
 }
+
+

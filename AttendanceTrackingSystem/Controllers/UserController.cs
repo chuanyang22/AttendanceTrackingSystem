@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Data;
@@ -32,7 +32,7 @@ namespace AttendanceTrackingSystem.Controllers
                 query = query.Where(u => u.FullName.Contains(searchString) || u.Email.Contains(searchString));
                 ViewData["CurrentFilter"] = searchString;
             }
-            var users = await query.OrderBy(u => u.Role).ThenBy(u => u.FullName).ToListAsync();
+            var users = await query.OrderBy(u => u.Role == "Admin" ? 1 : u.Role == "Teacher" ? 2 : 3).ThenBy(u => u.FullName).ToListAsync();
             return View(users);
         }
 
@@ -89,6 +89,7 @@ namespace AttendanceTrackingSystem.Controllers
                     {
                         Name = user.FullName,
                         Email = user.Email,
+                        Phone = "0000000000",
                         Status = "Active"
                     };
                     _context.Students.Add(student);
@@ -215,3 +216,6 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
+
+

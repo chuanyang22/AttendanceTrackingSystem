@@ -57,7 +57,9 @@
 
     <div class="form-group">
         <label asp-for="TeacherId">Assign Teacher</label>
-        <select asp-for="TeacherId" class="form-select" asp-items="ViewBag.TeacherId"></select>
+        <select asp-for="TeacherId" class="form-select" asp-items="ViewBag.TeacherId">
+            <option value="">-- Select a Teacher --</option>
+        </select>
         <span asp-validation-for="TeacherId" class="text-danger"></span>
     </div>
 
@@ -136,4 +138,5 @@
         generateEndTimes();
     </script>
 }
+
 

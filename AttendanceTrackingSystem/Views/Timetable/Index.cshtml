@@ -72,7 +72,7 @@
                         <a class="dropdown-item @(w == Model.CurrentWeekNumber ? "active fw-bold" : "")" 
                            asp-action="Index" 
                            asp-route-weekDate="@weekStartDate.ToString("yyyy-MM-dd")">
-                            Week @w <small class="text-muted ms-2">(@weekStartDate.ToString("dd MMM"))</small>
+                            Week @w <small class="@(w == Model.CurrentWeekNumber ? "text-white opacity-75" : "text-muted") ms-2">(@weekStartDate.ToString("dd MMM"))</small>
                         </a>
                     </li>
                 }
@@ -168,3 +168,5 @@
         </div>
     }
 </div>
+
+

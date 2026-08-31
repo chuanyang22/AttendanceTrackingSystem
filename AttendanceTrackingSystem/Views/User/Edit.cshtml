@@ -1,4 +1,4 @@
-@model AttendanceTrackingSystem.Models.User
+﻿@model AttendanceTrackingSystem.Models.User
 
 @{
     ViewData["Title"] = "Edit User";
@@ -16,7 +16,11 @@
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
                     <div class="text-center mb-4">
-                        <img src="@(string.IsNullOrEmpty(Model.ProfilePictureUrl) ? "https://via.placeholder.com/80" : Model.ProfilePictureUrl)"
+                        @{
+    var defaultAvatarUrl = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(Model.FullName)}&background=random&color=fff&size=80";
+    var avatarToDisplay = string.IsNullOrEmpty(Model.ProfilePictureUrl) ? defaultAvatarUrl : Model.ProfilePictureUrl;
+}
+                        <img src="@avatarToDisplay"
                              alt="@Model.FullName"
                              class="rounded-circle border mb-2"
                              style="width: 80px; height: 80px; object-fit: cover;" />
@@ -38,7 +42,7 @@
                                         <div class="form-group mb-3">
                         <label for="newPassword" class="form-label fw-semibold">New Password (Leave blank to keep unchanged)</label>
                         <div class="input-group">
-                            <input type="password" id="newPassword" name="newPassword" class="form-control" placeholder="••••••••" onmouseover="hoverPassword()" onmouseout="unhoverPassword()" data-val="true" data-val-minlength="New password must be at least 6 characters." data-val-minlength-min="6" />
+                            <input type="password" id="newPassword" name="newPassword" class="form-control" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" onmouseover="hoverPassword()" onmouseout="unhoverPassword()" data-val="true" data-val-minlength="New password must be at least 6 characters." data-val-minlength-min="6" />
                             <button class="btn btn-outline-secondary" type="button" onclick="togglePassword()">
                                 <i id="toggleIcon" class="bi bi-eye"></i>
                             </button>
@@ -104,4 +108,6 @@
         }
     </script>
 }
+
+
 

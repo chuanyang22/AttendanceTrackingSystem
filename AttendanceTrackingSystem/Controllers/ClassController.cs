@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -150,6 +150,23 @@ namespace AttendanceTrackingSystem.Controllers
                 }
             }
 
+            if (schoolClass.TeacherId <= 0)
+
+            {
+
+                ModelState.AddModelError("TeacherId", "You must select a teacher.");
+
+            }
+
+            else if (!_context.Users.Any(u => u.Role == "Teacher" && u.UserId == schoolClass.TeacherId))
+
+            {
+
+                ModelState.AddModelError("TeacherId", "Invalid teacher selected.");
+
+            }
+
+
             if (ModelState.IsValid)
             {
                 _context.Add(schoolClass);
@@ -193,6 +210,23 @@ namespace AttendanceTrackingSystem.Controllers
                         ModelState.AddModelError("Schedule", "Class duration cannot exceed 4 hours.");
                 }
             }
+
+            if (schoolClass.TeacherId <= 0)
+
+            {
+
+                ModelState.AddModelError("TeacherId", "You must select a teacher.");
+
+            }
+
+            else if (!_context.Users.Any(u => u.Role == "Teacher" && u.UserId == schoolClass.TeacherId))
+
+            {
+
+                ModelState.AddModelError("TeacherId", "Invalid teacher selected.");
+
+            }
+
 
             if (ModelState.IsValid)
             {
@@ -245,5 +279,7 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
+
 
 

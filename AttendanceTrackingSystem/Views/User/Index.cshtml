@@ -61,8 +61,12 @@
                         {
                             <tr>
                                 <td>
-                                    <img src="@(string.IsNullOrEmpty(user.ProfilePictureUrl) ? "https://via.placeholder.com/40" : user.ProfilePictureUrl)"
-                                         alt="@user.FullName"
+                                    @{
+                                          var defaultAvatarUrl = $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(user.FullName)}&background=random&color=fff";
+                                          var avatarToDisplay = string.IsNullOrEmpty(user.ProfilePictureUrl) ? defaultAvatarUrl : user.ProfilePictureUrl;
+                                      }
+                                      <img src="@avatarToDisplay"
+                                           alt="@user.FullName"
                                          class="rounded-circle border"
                                          style="width: 40px; height: 40px; object-fit: cover;" />
                                 </td>
@@ -109,4 +113,6 @@
         }, 15000);
     </script>
 }
+
+
 
