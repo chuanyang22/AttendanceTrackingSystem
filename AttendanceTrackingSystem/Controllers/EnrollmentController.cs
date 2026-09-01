@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -17,26 +17,7 @@ namespace AttendanceTrackingSystem.Controllers
             _context = context;
         }
 
-        // GET: Enrollment
-        public async Task<IActionResult> Index(string searchString)
-        {
-            var enrollments = _context.Enrollments
-                .Include(e => e.Student)
-                .Include(e => e.SchoolClass)
-                .AsQueryable();
-
-            if (!string.IsNullOrEmpty(searchString))
-            {
-                enrollments = enrollments.Where(e =>
-                    (e.Student != null && e.Student.Name.Contains(searchString)) ||
-                    (e.SchoolClass != null && e.SchoolClass.ClassName.Contains(searchString)));
-            }
-
-            ViewData["CurrentFilter"] = searchString;
-
-            return View(await enrollments.OrderByDescending(e => e.EnrollDate).ToListAsync());
-
-        }
+        
 
         // GET: Enrollment/Create?studentId=1&classId=2
         public IActionResult Create(int? studentId, int? classId)
@@ -126,5 +107,6 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
 
 
