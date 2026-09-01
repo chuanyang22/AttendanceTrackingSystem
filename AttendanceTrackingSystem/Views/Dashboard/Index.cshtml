@@ -1,4 +1,4 @@
-﻿@model AttendanceTrackingSystem.Models.ViewModels.DashboardViewModel
+@model AttendanceTrackingSystem.Models.ViewModels.DashboardViewModel
 
 <style>
     .quick-access-btn:hover small.text-muted {
@@ -202,6 +202,25 @@
 @if (!User.IsInRole("Student"))
 {
         <!-- Charts Row -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 p-4 h-100">
+                    <h5 class="fw-bold mb-4 text-primary"><i class="bi bi-pie-chart-fill me-2"></i>Overall Attendance Rate</h5>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="attendancePieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 p-4 h-100">
+                    <h5 class="fw-bold mb-4 text-success"><i class="bi bi-bar-chart-line-fill me-2"></i>Attendance Breakdown</h5>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="attendanceBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         @if (User.IsInRole("Admin"))
     {
         <!-- Admin Quick Access & Recent -->
@@ -253,7 +272,9 @@
 }
 
 @section Scripts {
-    
+    <!-- Add Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const container = document.getElementById("recentPagesContainer");
@@ -282,7 +303,32 @@
         });
     </script>
     <script>
-        
+        var present = @Model.PresentCount;
+        var absent = @Model.AbsentCount;
+        var excused = @Model.ExcusedCount;
+
+        // Pie Chart
+        var pieChartEl = document.getElementById('attendancePieChart');
+        if (pieChartEl) {
+            new Chart(pieChartEl, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Present', 'Absent', 'Excused'],
+                    datasets: [{
+                        data: [present, absent, excused],
+                        backgroundColor: ['#198754', '#dc3545', '#ffc107'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
         }
 
         // Bar Chart (Only for non-students)
@@ -303,6 +349,9 @@
                     maintainAspectRatio: false,
                     scales: {
                         y: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { display: false }
                     }
                 }
             });

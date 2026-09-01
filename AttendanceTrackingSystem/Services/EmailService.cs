@@ -71,5 +71,13 @@ namespace AttendanceTrackingSystem.Services
 
             await SendEmailAsync(toEmail, subject, body);
         }
+
+        public async Task SendPasswordResetLinkAsync(string toEmail, string userName, string resetLink)
+        {
+            string subject = "Reset Your Password - Action Required";
+            string body = $"Dear {userName},\n\nYou requested to reset your password. Please click the secure link below to create a new password:\n\n{resetLink}\n\nThis link will expire in 15 minutes.\nIf you did not request this, please ignore this email.";
+
+            await SendEmailAsync(toEmail, subject, body);
+        }
     }
 }

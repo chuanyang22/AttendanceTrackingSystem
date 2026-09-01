@@ -121,7 +121,7 @@ namespace AttendanceTrackingSystem.Controllers
             return View();
         }
 
-                // POST: /Account/ForgotPassword
+        // POST: /Account/ForgotPassword
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
@@ -131,54 +131,25 @@ namespace AttendanceTrackingSystem.Controllers
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
             if (user != null)
             {
-                var random = new Random();
-                var pinCode = random.Next(100000, 999999).ToString();
+                var secureToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray()).Replace("+", "").Replace("/", "").Replace("=", "");
 
-                user.ResetToken = pinCode;
+                user.ResetToken = secureToken;
                 user.ResetTokenExpiry = DateTime.UtcNow.AddMinutes(15);
                 await _context.SaveChangesAsync();
 
-                await _emailService.SendPasswordResetPinAsync(user.Email, user.FullName, pinCode);
+                var resetLink = Url.Action(nameof(ResetPassword), "Account", new { token = secureToken, email = model.Email }, Request.Scheme);
 
-                TempData["SuccessMessage"] = "A 6-digit PIN has been sent to your email.";
-                return RedirectToAction(nameof(VerifyPin), new { email = model.Email });
+                await _emailService.SendPasswordResetLinkAsync(user.Email, user.FullName, resetLink!);
+
+                TempData["SuccessMessage"] = "A password reset link has been sent to your email.";
+                return RedirectToAction(nameof(Login));
             }
 
-            TempData["SuccessMessage"] = "If an account with that email exists, we have sent a password reset PIN.";
-            return RedirectToAction(nameof(VerifyPin), new { email = model.Email });
+            TempData["SuccessMessage"] = "If an account with that email exists, we have sent a password reset link.";
+            return RedirectToAction(nameof(Login));
         }
 
-        // GET: /Account/VerifyPin
-        [HttpGet]
-        public IActionResult VerifyPin(string email)
-        {
-            if (string.IsNullOrEmpty(email)) return RedirectToAction(nameof(Login));
-            return View(new AttendanceTrackingSystem.Models.ViewModels.VerifyPinViewModel { Email = email });
-        }
 
-        // POST: /Account/VerifyPin
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> VerifyPin(AttendanceTrackingSystem.Models.ViewModels.VerifyPinViewModel model)
-        {
-            if (!ModelState.IsValid) return View(model);
-
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
-            if (user != null)
-            {
-                if (user.ResetToken == model.PinCode && user.ResetTokenExpiry.HasValue && user.ResetTokenExpiry.Value > DateTime.UtcNow)
-                {
-                    var secureToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray()).Replace("+", "").Replace("/", "").Replace("=", "");
-                    user.ResetToken = secureToken;
-                    await _context.SaveChangesAsync();
-
-                    return RedirectToAction(nameof(ResetPassword), new { token = secureToken, email = model.Email });
-                }
-            }
-
-            ModelState.AddModelError("PinCode", "Invalid or expired PIN code.");
-            return View(model);
-        }
 
         // GET: /Account/ResetPassword
         [HttpGet]

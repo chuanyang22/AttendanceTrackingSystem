@@ -34,23 +34,42 @@
             const container = document.getElementById('studentTableContainer');
             let debounceTimer;
 
+            function loadData(url) {
+                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(response => response.text())
+                    .then(html => {
+                        container.innerHTML = html;
+                        history.replaceState(null, '', url);
+                    })
+                    .catch(err => console.error('AJAX failed:', err));
+            }
+
             searchBox.addEventListener('input', function () {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(function () {
                     const query = searchBox.value;
                     const url = '@Url.Action("Index", "Student")' + '?searchString=' + encodeURIComponent(query);
-
-                    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                        .then(response => response.text())
-                        .then(html => {
-                            container.innerHTML = html;
-                            const newUrl = query
-                                ? '@Url.Action("Index", "Student")' + '?searchString=' + encodeURIComponent(query)
-                                : '@Url.Action("Index", "Student")';
-                            history.replaceState(null, '', newUrl);
-                        })
-                        .catch(err => console.error('Search failed:', err));
+                    loadData(url);
                 }, 300);
+            });
+
+            // Delegate events for dynamically loaded sorting/paging links
+            container.addEventListener('click', function (e) {
+                if (e.target.closest('.ajax-link')) {
+                    e.preventDefault();
+                    const link = e.target.closest('.ajax-link');
+                    if (link.parentElement.classList.contains('disabled')) return;
+
+                    const sort = link.getAttribute('data-sort') || '';
+                    const page = link.getAttribute('data-page') || 1;
+                    const query = searchBox.value;
+
+                    let url = '@Url.Action("Index", "Student")' + '?searchString=' + encodeURIComponent(query) 
+                            + '&sortOrder=' + encodeURIComponent(sort) 
+                            + '&pageNumber=' + page;
+                    
+                    loadData(url);
+                }
             });
         })();
     </script>

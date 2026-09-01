@@ -17,8 +17,19 @@ namespace AttendanceTrackingSystem.Controllers
         }
 
         // GET: Student
-        public async Task<IActionResult> Index(string searchString)
+        public async Task<IActionResult> Index(string searchString, string sortOrder, int? pageNumber)
         {
+            ViewData["CurrentSort"] = sortOrder;
+            ViewData["NameSortParm"] = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
+            ViewData["EmailSortParm"] = sortOrder == "Email" ? "email_desc" : "Email";
+            ViewData["StatusSortParm"] = sortOrder == "Status" ? "status_desc" : "Status";
+            
+            if (searchString != null)
+            {
+                pageNumber = 1;
+            }
+            ViewData["CurrentFilter"] = searchString;
+
             var students = from s in _context.Students select s;
 
             if (!string.IsNullOrEmpty(searchString))
@@ -27,16 +38,42 @@ namespace AttendanceTrackingSystem.Controllers
                                              || s.Email.Contains(searchString));
             }
 
-            ViewData["CurrentFilter"] = searchString;
+            switch (sortOrder)
+            {
+                case "name_desc":
+                    students = students.OrderByDescending(s => s.Name);
+                    break;
+                case "Email":
+                    students = students.OrderBy(s => s.Email);
+                    break;
+                case "email_desc":
+                    students = students.OrderByDescending(s => s.Email);
+                    break;
+                case "Status":
+                    students = students.OrderBy(s => s.Status);
+                    break;
+                case "status_desc":
+                    students = students.OrderByDescending(s => s.Status);
+                    break;
+                default:
+                    students = students.OrderBy(s => s.Name);
+                    break;
+            }
 
-            var result = await students.ToListAsync();
+            int pageSize = 5;
+            int pageIndex = pageNumber ?? 1;
+            int count = await students.CountAsync();
+            var items = await students.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToListAsync();
+
+            ViewData["TotalPages"] = (int)Math.Ceiling(count / (double)pageSize);
+            ViewData["PageIndex"] = pageIndex;
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
-                return PartialView("_StudentTable", result);
+                return PartialView("_StudentTable", items);
             }
 
-            return View(result);
+            return View(items);
         }
 
         // GET: Student/Details/5
@@ -163,6 +200,74 @@ namespace AttendanceTrackingSystem.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // POST: Student/UploadCsv
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadCsv(IFormFile csvFile)
+        {
+            if (csvFile == null || csvFile.Length == 0)
+            {
+                TempData["ErrorMessage"] = "Please select a valid CSV file to upload.";
+                return RedirectToAction(nameof(BatchCreate));
+            }
+
+            var newStudents = new List<Student>();
+            using (var reader = new StreamReader(csvFile.OpenReadStream()))
+            {
+                // Skip header
+                var header = await reader.ReadLineAsync();
+                
+                while (!reader.EndOfStream)
+                {
+                    var line = await reader.ReadLineAsync();
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    var values = line.Split(',');
+                    if (values.Length >= 2) // At least Name and Email
+                    {
+                        newStudents.Add(new Student
+                        {
+                            Name = values[0].Trim(),
+                            Email = values[1].Trim(),
+                            Phone = values.Length > 2 ? values[2].Trim() : "",
+                            Status = values.Length > 3 ? values[3].Trim() : "Active"
+                        });
+                    }
+                }
+            }
+
+            if (newStudents.Count == 0)
+            {
+                TempData["ErrorMessage"] = "No valid data found in the CSV file.";
+                return RedirectToAction(nameof(BatchCreate));
+            }
+
+            _context.Students.AddRange(newStudents);
+
+            // Create User accounts for these new students
+            var existingEmails = await _context.Users.Select(u => u.Email.ToLower()).ToListAsync();
+            foreach (var student in newStudents)
+            {
+                if (!existingEmails.Contains(student.Email.ToLower()))
+                {
+                    _context.Users.Add(new User
+                    {
+                        FullName = student.Name,
+                        Email = student.Email,
+                        Role = "Student",
+                        PasswordHash = AttendanceTrackingSystem.Services.PasswordHelper.HashPassword("Student123!"),
+                        IsActive = true,
+                        CreatedAt = DateTime.Now
+                    });
+                    existingEmails.Add(student.Email.ToLower());
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["BatchSuccessMessage"] = $"{newStudents.Count} student(s) imported successfully from CSV.";
+            return RedirectToAction(nameof(Index));
+        }
 
         // GET: Student/Edit/5
         public async Task<IActionResult> Edit(int? id)
