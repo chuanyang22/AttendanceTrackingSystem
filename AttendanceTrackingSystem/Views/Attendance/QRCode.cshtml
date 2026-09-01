@@ -33,57 +33,48 @@
                 }
             </p>
 
-            <!-- 6-Digit PIN Display Box -->
-            <div class="bg-light p-4 p-md-5 rounded-4 border border-2 my-3 position-relative">
-                <div class="text-muted text-uppercase fw-semibold small mb-2">Student 6-Digit Check-In PIN</div>
-                
-                <div id="pinDisplay" class="display-1 fw-bolder text-primary tracking-widest my-2 font-monospace" style="letter-spacing: 12px; text-shadow: 0 2px 4px rgba(99,102,241,0.15);">
-                    @Model.QRCodeToken
-                </div>
-
-                <div class="mt-3 d-flex justify-content-center gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="copyPinCode('@Model.QRCodeToken')">
-                        <i class="bi bi-clipboard me-1"></i> Copy Code
-                    </button>
-
-                                        @if (User.IsInRole("Admin"))
-                    {
-                        <form asp-controller="Attendance" asp-action="RegenerateCode" asp-route-id="@Model.SessionId" method="post" class="d-inline" onsubmit="return confirm('Generate a new random 6-digit PIN? The previous code will no longer work.');">
-                            <button type="submit" class="btn btn-outline-warning text-dark btn-sm fw-semibold">
-                                <i class="bi bi-arrow-repeat me-1"></i> Randomize / New PIN
-                            </button>
-                        </form>
-                    }
-                </div>
-            </div>
-
-            <!-- Check-In Live Summary -->
-            <div class="d-flex justify-content-center align-items-center gap-3 my-3">
-                <div class="badge bg-success fs-6 py-2 px-3">
-                    <i class="bi bi-people-fill me-1"></i> @presentCount Checked In
-                </div>
-                @if (totalCount > 0)
-                {
-                    <div class="badge bg-light text-dark border fs-6 py-2 px-3">
-                        Total Enrolled: @totalCount
+            <!-- QR Code & PIN Display Row -->
+            <div class="row g-4 my-3">
+                <!-- QR Code Box -->
+                <div class="col-md-6">
+                    <div class="bg-light p-4 rounded-4 border border-2 h-100 d-flex flex-column justify-content-center align-items-center">
+                        <div class="text-muted text-uppercase fw-semibold small mb-3">Scan to get PIN</div>
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=@Model.QRCodeToken" 
+                             alt="QR Code" 
+                             class="img-fluid border p-2 bg-white rounded-3 shadow-sm mb-3" 
+                             style="width: 200px; height: 200px;" />
+                        <div class="text-muted small">
+                            <i class="bi bi-camera me-1"></i> Point your phone camera here
+                        </div>
                     </div>
-                }
-            </div>
+                </div>
 
-            <p class="text-secondary small mt-2">
-                <i class="bi bi-info-circle me-1"></i> Instruct students to log into their ATS Portal and enter this 6-digit code to immediately mark themselves <strong>Present</strong>.
-            </p>
+                <!-- 6-Digit PIN Box -->
+                <div class="col-md-6">
+                    <div class="bg-light p-4 rounded-4 border border-2 h-100 d-flex flex-column justify-content-center position-relative">
+                        <div class="text-muted text-uppercase fw-semibold small mb-2">6-Digit Check-In PIN</div>
+                        
+                        <div id="pinDisplay" class="display-3 fw-bolder text-primary tracking-widest my-3 font-monospace" style="letter-spacing: 8px; text-shadow: 0 2px 4px rgba(99,102,241,0.15);">
+                            @Model.QRCodeToken
+                        </div>
 
-            <div class="d-flex justify-content-center gap-2 mt-4 pt-2 border-top">
-                <a asp-controller="Class" asp-action="Details" asp-route-id="@Model.ClassId" class="btn btn-outline-secondary px-4">
-                    <i class="bi bi-arrow-left me-1"></i> Back to Class
-                </a>
-                <a asp-controller="Attendance" asp-action="Mark" asp-route-id="@Model.SessionId" class="btn btn-success px-4">
-                    <i class="bi bi-check2-circle me-1"></i> View Attendance Roster
-                </a>
+                        <div class="d-flex justify-content-center gap-2 mt-auto">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="copyPinCode('@Model.QRCodeToken')">
+                                <i class="bi bi-clipboard me-1"></i> Copy Code
+                            </button>
+
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <form asp-controller="Attendance" asp-action="RegenerateCode" asp-route-id="@Model.SessionId" method="post" class="d-inline" onsubmit="return confirm('Generate a new random 6-digit PIN? The previous code will no longer work.');">
+                                    <button type="submit" class="btn btn-outline-warning text-dark btn-sm fw-semibold">
+                                        <i class="bi bi-arrow-repeat me-1"></i> New PIN
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
 </div>
 
 @section Scripts {
@@ -97,3 +88,4 @@
         }
     </script>
 }
+

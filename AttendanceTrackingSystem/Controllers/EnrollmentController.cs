@@ -53,7 +53,7 @@ namespace AttendanceTrackingSystem.Controllers
                 {
                     return RedirectToAction("Details", "Class", new { id = enrollment.ClassId });
                 }
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction("Index", "Class");
             }
 
             PopulateDropDowns(enrollment.StudentId, enrollment.ClassId);
@@ -94,7 +94,7 @@ namespace AttendanceTrackingSystem.Controllers
                 return RedirectToAction("Details", "Class", new { id = classId });
             }
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction("Index", "Class");
         }
 
         private void PopulateDropDowns(int? selectedStudentId = null, int? selectedClassId = null)
@@ -107,6 +107,7 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
 
 
 

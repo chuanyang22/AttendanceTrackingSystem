@@ -36,6 +36,67 @@ namespace AttendanceTrackingSystem.Controllers
             return View(users);
         }
 
+        // POST: /User/BulkImport
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkImport(IFormFile file, string role)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["ErrorMessage"] = "Please select a valid CSV file.";
+                return RedirectToAction(nameof(Index), new { role = role });
+            }
+
+            int successCount = 0;
+            
+            using (var reader = new StreamReader(file.OpenReadStream()))
+            {
+                while (!reader.EndOfStream)
+                {
+                    var line = await reader.ReadLineAsync();
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    var values = line.Split(',');
+                    if (values.Length >= 2)
+                    {
+                        var fullName = values[0].Trim();
+                        var email = values[1].Trim();
+
+                        // Skip if user already exists
+                        if (await _context.Users.AnyAsync(u => u.Email.ToLower() == email.ToLower())) continue;
+
+                        var newUser = new User
+                        {
+                            FullName = fullName,
+                            Email = email,
+                            Role = role,
+                            PasswordHash = AttendanceTrackingSystem.Services.PasswordHelper.HashPassword("Password123!"),
+                            IsActive = true,
+                            CreatedAt = DateTime.Now
+                        };
+
+                        _context.Users.Add(newUser);
+                        successCount++;
+
+                        if (role == "Student")
+                        {
+                            _context.Students.Add(new Student
+                            {
+                                Name = fullName,
+                                Email = email,
+                                Phone = "0000000000",
+                                Status = "Active"
+                            });
+                        }
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = $"Successfully imported {successCount} users as {role}!";
+            return RedirectToAction(nameof(Index), new { role = role });
+        }
+
         // GET: /User/Create
         public IActionResult Create()
         {
@@ -216,6 +277,7 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
 
 
 
