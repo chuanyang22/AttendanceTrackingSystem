@@ -35,7 +35,7 @@ namespace AttendanceTrackingSystem.Data
                 context.Users.Add(teacherUser);
             }
 
-            if (!context.Users.Any(u => u.Email == "shivendrat@student.tarc.edu.my"))
+            if (!context.Users.Any(u => u.Email == "shivendrat-wm25@student.tarc.edu.my"))
             {
                 var studentUser = new User
                 {
