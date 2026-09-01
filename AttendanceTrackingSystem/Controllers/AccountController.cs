@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -238,8 +238,23 @@ namespace AttendanceTrackingSystem.Controllers
                 }
             }
 
-            // Handle updated photo
-            if (model.NewProfileImage != null && model.NewProfileImage.Length > 0)
+            // Handle cropped photo
+            if (!string.IsNullOrEmpty(model.CroppedBase64))
+            {
+                var base64Data = model.CroppedBase64.Split(',')[1];
+                var bytes = Convert.FromBase64String(base64Data);
+                
+                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "avatars");
+                Directory.CreateDirectory(uploadsFolder);
+                
+                var uniqueFileName = $"{Guid.NewGuid()}_avatar.png";
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                
+                await System.IO.File.WriteAllBytesAsync(filePath, bytes);
+                user.ProfilePictureUrl = $"/uploads/avatars/{uniqueFileName}";
+            }
+            // Handle standard file upload (fallback)
+            else if (model.NewProfileImage != null && model.NewProfileImage.Length > 0)
             {
                 var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "avatars");
                 Directory.CreateDirectory(uploadsFolder);
@@ -292,6 +307,7 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
 
 
 

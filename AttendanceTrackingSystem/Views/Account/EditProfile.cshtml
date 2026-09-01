@@ -12,7 +12,7 @@
                     <img src="@(string.IsNullOrEmpty(Model.ExistingProfilePictureUrl) ? "https://api.dicebear.com/7.x/initials/svg?seed=" + Model.FullName : Model.ExistingProfilePictureUrl)"
                          class="rounded-circle border border-3 border-primary shadow"
                          style="width: 90px; height: 90px; object-fit: cover;"
-                         alt="Current Profile Photo" />
+                         alt="Current Profile Photo" id="profileImagePreview" />
                 </div>
                 <h3 class="fw-bold tracking-tight">Edit Profile</h3>
                 <p class="text-muted small">Update your name or upload a new profile photo</p>
@@ -24,6 +24,7 @@
                 <input type="hidden" asp-for="UserId" />
                 <input type="hidden" asp-for="ExistingProfilePictureUrl" />
                 <input type="hidden" asp-for="Role" />
+                <input type="hidden" asp-for="CroppedBase64" id="CroppedBase64" />
 
                 <div class="form-floating mb-3">
                     <input asp-for="FullName" class="form-control rounded-3" placeholder="Full Name" required />
@@ -40,7 +41,7 @@
                     <label class="form-label text-muted small fw-medium">
                         <i class="bi bi-camera me-1"></i> Choose New Photo (PNG / JPG)
                     </label>
-                    <input asp-for="NewProfileImage" type="file" class="form-control rounded-3" accept="image/*" />
+                    <input asp-for="NewProfileImage" type="file" class="form-control rounded-3" accept="image/*" id="imageInput" />
                     <span asp-validation-for="NewProfileImage" class="text-danger small"></span>
                 </div>
 
@@ -58,7 +59,105 @@
     </div>
 </div>
 
+<!-- Cropper Modal -->
+<div class="modal fade" id="cropperModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Crop Profile Photo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center bg-dark">
+                <div style="max-height: 500px; max-width: 100%; overflow: hidden;">
+                    <img id="cropperImage" src="" style="max-width: 100%; display: block;" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="cropConfirmBtn">Confirm Crop</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <!-- Cropper.js -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let cropper = null;
+            const imageInput = document.getElementById("imageInput");
+            const cropperImage = document.getElementById("cropperImage");
+            const profilePreview = document.getElementById("profileImagePreview");
+            const croppedBase64Input = document.getElementById("CroppedBase64");
+            const cropperModalElement = document.getElementById("cropperModal");
+            const cropperModal = new bootstrap.Modal(cropperModalElement);
+
+            imageInput.addEventListener("change", function (e) {
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        cropperImage.src = event.target.result;
+                        cropperModal.show();
+                    };
+                    reader.readAsDataURL(files[0]);
+                }
+            });
+
+            cropperModalElement.addEventListener("shown.bs.modal", function () {
+                if (cropper) {
+                    cropper.destroy();
+                }
+                cropper = new Cropper(cropperImage, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    dragMode: "move",
+                    autoCropArea: 1,
+                    restore: false,
+                    guides: true,
+                    center: true,
+                    highlight: false,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    toggleDragModeOnDblclick: false,
+                });
+            });
+
+            cropperModalElement.addEventListener("hidden.bs.modal", function () {
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                // If they cancelled without cropping, clear the file input
+                if (!croppedBase64Input.value) {
+                    imageInput.value = "";
+                }
+            });
+
+            document.getElementById("cropConfirmBtn").addEventListener("click", function () {
+                if (cropper) {
+                    const canvas = cropper.getCroppedCanvas({
+                        width: 400,
+                        height: 400
+                    });
+                    const base64Data = canvas.toDataURL("image/png");
+                    
+                    // Set hidden input to send to backend
+                    croppedBase64Input.value = base64Data;
+                    
+                    // Update preview
+                    profilePreview.src = base64Data;
+                    
+                    cropperModal.hide();
+                }
+            });
+        });
+    </script>
+
     <partial name="_ValidationScriptsPartial" />
 }
+
 

@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -171,6 +171,7 @@ namespace AttendanceTrackingSystem.Controllers
 
                     foreach (var existingClass in teacherClasses)
                     {
+                        if (string.IsNullOrWhiteSpace(existingClass.Schedule)) continue;
                         var existingParts = existingClass.Schedule.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
                         if (existingParts.Length == 3 && existingParts[0].Equals(newDay, StringComparison.OrdinalIgnoreCase))
                         {
@@ -254,6 +255,7 @@ namespace AttendanceTrackingSystem.Controllers
 
                     foreach (var existingClass in teacherClasses)
                     {
+                        if (string.IsNullOrWhiteSpace(existingClass.Schedule)) continue;
                         var existingParts = existingClass.Schedule.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
                         if (existingParts.Length == 3 && existingParts[0].Equals(newDay, StringComparison.OrdinalIgnoreCase))
                         {
@@ -323,6 +325,7 @@ namespace AttendanceTrackingSystem.Controllers
         }
     }
 }
+
 
 
 

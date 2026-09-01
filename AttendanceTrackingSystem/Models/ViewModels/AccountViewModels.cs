@@ -68,8 +68,10 @@ namespace AttendanceTrackingSystem.Models.ViewModels
         public string Role { get; set; } = string.Empty;
 
         public string? ExistingProfilePictureUrl { get; set; }
+        public string? CroppedBase64 { get; set; }
 
         [Display(Name = "Update Profile Photo")]
         public IFormFile? NewProfileImage { get; set; }
     }
 }
+

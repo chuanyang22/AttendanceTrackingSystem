@@ -73,8 +73,37 @@
                             }
                         </div>
                     </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Check-In Live Summary -->
+            <div class="d-flex justify-content-center align-items-center gap-3 my-3">
+                <div class="badge bg-success fs-6 py-2 px-3">
+                    <i class="bi bi-people-fill me-1"></i> @presentCount Checked In
+                </div>
+                @if (totalCount > 0)
+                {
+                    <div class="badge bg-light text-dark border fs-6 py-2 px-3">
+                        Total Enrolled: @totalCount
+                    </div>
+                }
+            </div>
+
+            <p class="text-secondary small mt-2">
+                <i class="bi bi-info-circle me-1"></i> Instruct students to log into their ATS Portal and enter this 6-digit code to immediately mark themselves <strong>Present</strong>.
+            </p>
+
+            <div class="d-flex justify-content-center gap-2 mt-4 pt-2 border-top">
+                <a asp-controller="Class" asp-action="Details" asp-route-id="@Model.ClassId" class="btn btn-outline-secondary px-4">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Class
+                </a>
+                <a asp-controller="Attendance" asp-action="Mark" asp-route-id="@Model.SessionId" class="btn btn-success px-4">
+                    <i class="bi bi-check2-circle me-1"></i> View Attendance Roster
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
@@ -88,4 +117,5 @@
         }
     </script>
 }
+
 
