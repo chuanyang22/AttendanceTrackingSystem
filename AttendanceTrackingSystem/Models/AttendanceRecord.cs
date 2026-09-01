@@ -28,5 +28,9 @@ namespace AttendanceTrackingSystem.Models
         public string? Remarks { get; set; }
 
         public DateTime MarkedAt { get; set; } = DateTime.Now;
+
+        // GPS Location (Maps Integration)
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
     }
 }

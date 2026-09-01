@@ -20,5 +20,7 @@ namespace AttendanceTrackingSystem.Models.ViewModels
         public string StudentEmail { get; set; } = string.Empty;
         public string Status { get; set; } = "Present"; // Present, Absent, Late, Excused
         public string? Remarks { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
     }
 }

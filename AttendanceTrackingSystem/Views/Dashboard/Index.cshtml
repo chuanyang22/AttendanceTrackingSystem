@@ -29,7 +29,9 @@
         <div class="col-md-6">
             <div class="card shadow-sm border-0 bg-light p-4 rounded-3">
                 <h5 class="fw-bold mb-3"><i class="bi bi-upc-scan me-2"></i>Quick Attendance Check-In</h5>
-                <form asp-controller="Attendance" asp-action="PinCheckIn" method="post" class="d-flex gap-2">
+                <form id="checkInForm" asp-controller="Attendance" asp-action="PinCheckIn" method="post" class="d-flex gap-2">
+                    <input type="hidden" id="latitude" name="latitude" />
+                    <input type="hidden" id="longitude" name="longitude" />
                     <input type="text" name="pinCode" class="form-control form-control-lg text-center fw-bold" placeholder="Enter 6-Digit PIN" maxlength="6" pattern="\d{6}" required style="letter-spacing: 5px;" />
                     <button type="submit" class="btn btn-primary btn-lg px-4">Submit</button>
                 </form>
@@ -277,6 +279,23 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            const checkInForm = document.getElementById("checkInForm");
+            if (checkInForm) {
+                checkInForm.addEventListener("submit", function(e) {
+                    if (navigator.geolocation) {
+                        e.preventDefault();
+                        navigator.geolocation.getCurrentPosition(function(position) {
+                            document.getElementById("latitude").value = position.coords.latitude;
+                            document.getElementById("longitude").value = position.coords.longitude;
+                            checkInForm.submit();
+                        }, function(error) {
+                            console.warn("Geolocation disabled or denied, submitting without location.");
+                            checkInForm.submit();
+                        });
+                    }
+                });
+            }
+
             const container = document.getElementById("recentPagesContainer");
             if (container) {
                 try {

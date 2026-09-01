@@ -305,7 +305,9 @@ namespace AttendanceTrackingSystem.Controllers
                     StudentName = r.Student?.Name ?? "Unknown",
                     StudentEmail = r.Student?.Email ?? "",
                     Status = r.Status,
-                    Remarks = r.Remarks
+                    Remarks = r.Remarks,
+                    Latitude = r.Latitude,
+                    Longitude = r.Longitude
                 }).ToList()
             };
 
@@ -439,7 +441,7 @@ namespace AttendanceTrackingSystem.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Student")]
-        public async Task<IActionResult> PinCheckIn(string pinCode)
+        public async Task<IActionResult> PinCheckIn(string pinCode, double? latitude, double? longitude)
         {
             if (string.IsNullOrWhiteSpace(pinCode))
             {
@@ -501,6 +503,8 @@ namespace AttendanceTrackingSystem.Controllers
                     record.Status = "Present";
                     record.MarkedAt = DateTime.Now;
                     record.Remarks = "Checked in via 6-digit PIN code";
+                    record.Latitude = latitude;
+                    record.Longitude = longitude;
                     await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = $"Attendance registered successfully! You are marked Present for {session.SchoolClass?.ClassName} ({session.SessionType}).";
                 }
@@ -513,7 +517,9 @@ namespace AttendanceTrackingSystem.Controllers
                     StudentId = student.StudentId,
                     Status = "Present",
                     MarkedAt = DateTime.Now,
-                    Remarks = "Checked in via 6-digit PIN code"
+                    Remarks = "Checked in via 6-digit PIN code",
+                    Latitude = latitude,
+                    Longitude = longitude
                 };
                 _context.AttendanceRecords.Add(record);
                 await _context.SaveChangesAsync();

@@ -1,4 +1,4 @@
-﻿@model AttendanceTrackingSystem.Models.ViewModels.MarkAttendanceViewModel
+@model AttendanceTrackingSystem.Models.ViewModels.MarkAttendanceViewModel
 @{
     ViewData["Title"] = "Mark Attendance";
 }
@@ -29,9 +29,17 @@
                 <tr>
                     <td>
                         @Model.Students[i].StudentName
+                        @if (Model.Students[i].Latitude.HasValue && Model.Students[i].Longitude.HasValue)
+                        {
+                            <a href="https://www.openstreetmap.org/?mlat=@Model.Students[i].Latitude&mlon=@Model.Students[i].Longitude#map=18/@Model.Students[i].Latitude/@Model.Students[i].Longitude" target="_blank" class="badge bg-info text-decoration-none ms-2" title="View Check-In Location">
+                                <i class="bi bi-geo-alt-fill"></i> Map
+                            </a>
+                        }
                         <input type="hidden" asp-for="Students[i].StudentId" />
                         <input type="hidden" asp-for="Students[i].StudentName" />
                         <input type="hidden" asp-for="Students[i].StudentEmail" />
+                        <input type="hidden" asp-for="Students[i].Latitude" />
+                        <input type="hidden" asp-for="Students[i].Longitude" />
                     </td>
                     <td>@Model.Students[i].StudentEmail</td>
                     <td>
