@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -136,7 +136,7 @@ namespace AttendanceTrackingSystem.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Create([Bind("ClassName,Schedule,TeacherId")] SchoolClass schoolClass)
+        public async Task<IActionResult> Create([Bind("ClassName,ClassType,Schedule,TeacherId")] SchoolClass schoolClass)
         {
             if (!string.IsNullOrEmpty(schoolClass.Schedule))
             {
@@ -151,19 +151,41 @@ namespace AttendanceTrackingSystem.Controllers
             }
 
             if (schoolClass.TeacherId <= 0)
-
             {
-
                 ModelState.AddModelError("TeacherId", "You must select a teacher.");
-
             }
-
             else if (!_context.Users.Any(u => u.Role == "Teacher" && u.UserId == schoolClass.TeacherId))
-
             {
-
                 ModelState.AddModelError("TeacherId", "Invalid teacher selected.");
+            }
+            else if (!string.IsNullOrEmpty(schoolClass.Schedule))
+            {
+                // Clash validation: Check if teacher already has a class overlapping with this time
+                var newParts = schoolClass.Schedule.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+                if (newParts.Length == 3 && TimeSpan.TryParse(newParts[1], out TimeSpan newStart) && TimeSpan.TryParse(newParts[2], out TimeSpan newEnd))
+                {
+                    string newDay = newParts[0];
+                    var teacherClasses = await _context.SchoolClasses
+                        .Where(c => c.TeacherId == schoolClass.TeacherId && c.Schedule != null)
+                        .ToListAsync();
 
+                    foreach (var existingClass in teacherClasses)
+                    {
+                        var existingParts = existingClass.Schedule.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (existingParts.Length == 3 && existingParts[0].Equals(newDay, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (TimeSpan.TryParse(existingParts[1], out TimeSpan existingStart) && TimeSpan.TryParse(existingParts[2], out TimeSpan existingEnd))
+                            {
+                                // Overlap logic: StartA < EndB AND EndA > StartB
+                                if (newStart < existingEnd && newEnd > existingStart)
+                                {
+                                    ModelState.AddModelError("Schedule", $"Cannot create class because time crashes with another class taught by this teacher: {existingClass.ClassName} ({existingClass.Schedule}).");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
 
@@ -195,7 +217,7 @@ namespace AttendanceTrackingSystem.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Edit(int id, [Bind("ClassId,ClassName,Schedule,TeacherId")] SchoolClass schoolClass)
+        public async Task<IActionResult> Edit(int id, [Bind("ClassId,ClassName,ClassType,Schedule,TeacherId")] SchoolClass schoolClass)
         {
             if (id != schoolClass.ClassId) return NotFound();
 
@@ -212,19 +234,41 @@ namespace AttendanceTrackingSystem.Controllers
             }
 
             if (schoolClass.TeacherId <= 0)
-
             {
-
                 ModelState.AddModelError("TeacherId", "You must select a teacher.");
-
             }
-
             else if (!_context.Users.Any(u => u.Role == "Teacher" && u.UserId == schoolClass.TeacherId))
-
             {
-
                 ModelState.AddModelError("TeacherId", "Invalid teacher selected.");
+            }
+            else if (!string.IsNullOrEmpty(schoolClass.Schedule))
+            {
+                // Clash validation: Check if teacher already has a class overlapping with this time (excluding THIS class)
+                var newParts = schoolClass.Schedule.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+                if (newParts.Length == 3 && TimeSpan.TryParse(newParts[1], out TimeSpan newStart) && TimeSpan.TryParse(newParts[2], out TimeSpan newEnd))
+                {
+                    string newDay = newParts[0];
+                    var teacherClasses = await _context.SchoolClasses
+                        .Where(c => c.TeacherId == schoolClass.TeacherId && c.ClassId != schoolClass.ClassId && c.Schedule != null)
+                        .ToListAsync();
 
+                    foreach (var existingClass in teacherClasses)
+                    {
+                        var existingParts = existingClass.Schedule.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (existingParts.Length == 3 && existingParts[0].Equals(newDay, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (TimeSpan.TryParse(existingParts[1], out TimeSpan existingStart) && TimeSpan.TryParse(existingParts[2], out TimeSpan existingEnd))
+                            {
+                                // Overlap logic: StartA < EndB AND EndA > StartB
+                                if (newStart < existingEnd && newEnd > existingStart)
+                                {
+                                    ModelState.AddModelError("Schedule", $"Cannot save class because time crashes with another class taught by this teacher: {existingClass.ClassName} ({existingClass.Schedule}).");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
 

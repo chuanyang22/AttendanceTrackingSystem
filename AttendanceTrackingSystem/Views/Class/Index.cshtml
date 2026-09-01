@@ -1,4 +1,4 @@
-﻿@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
+@model IEnumerable<AttendanceTrackingSystem.Models.SchoolClass>
 
 @{
     ViewData["Title"] = "Classes";
@@ -100,7 +100,10 @@
                                     <i class="bi bi-clock me-1 text-muted"></i>@displayTime
                                 </td>
                                 <td class="fw-semibold">
-                                    @item.ClassName <span class="text-muted fw-normal ms-1">(L)</span>
+                                    @{
+                                        string typeInitial = string.IsNullOrEmpty(item.ClassType) ? "L" : item.ClassType.Substring(0, 1);
+                                    }
+                                    @item.ClassName <span class="text-muted fw-normal ms-1">(@typeInitial)</span>
                                 </td>
                                 <td>@item.Teacher?.FullName</td>
                                 
