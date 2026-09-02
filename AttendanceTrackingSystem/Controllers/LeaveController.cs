@@ -26,41 +26,55 @@ namespace AttendanceTrackingSystem.Controllers
             _env = env;
         }
 
-        // GET: Leave (Page for Student Application & Teacher/Admin Review)
+        // GET: Leave (Page for Student/Teacher Application & Admin Review)
         [HttpGet]
-        public async Task<IActionResult> Index(string statusFilter = "All", string searchString = "")
+        public async Task<IActionResult> Index(string statusFilter = "All", string roleFilter = "All", string searchString = "")
         {
+            var isAdmin = User.IsInRole("Admin");
+            var userRole = isAdmin ? "Admin" : (User.IsInRole("Teacher") ? "Teacher" : "Student");
+
             var model = new LeaveIndexViewModel
             {
-                IsStudent = User.IsInRole("Student"),
+                IsAdmin = isAdmin,
+                IsApplicant = !isAdmin,
+                UserRole = userRole,
                 StatusFilter = statusFilter,
+                RoleFilter = roleFilter,
                 SearchString = searchString
             };
 
-            if (model.IsStudent)
+            if (!isAdmin)
             {
+                // Applicant View (Student or Teacher)
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                int.TryParse(userIdStr, out int userId);
                 var email = User.FindFirstValue(ClaimTypes.Email)?.ToLower();
-                var student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower() == email);
-                if (student == null && !string.IsNullOrEmpty(email))
+
+                // Find student ID if student
+                int? studentId = null;
+                if (userRole == "Student" && !string.IsNullOrEmpty(email))
                 {
-                    var prefix = email.Split('@')[0].Split('-')[0];
-                    student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower().StartsWith(prefix));
+                    var student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower() == email);
+                    if (student == null)
+                    {
+                        var prefix = email.Split('@')[0].Split('-')[0];
+                        student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower().StartsWith(prefix));
+                    }
+                    studentId = student?.StudentId;
                 }
 
-                if (student != null)
-                {
-                    model.MyApplications = await _context.LeaveApplications
-                        .Include(l => l.ReviewedByUser)
-                        .Where(l => l.StudentId == student.StudentId)
-                        .OrderByDescending(l => l.SubmittedAt)
-                        .ToListAsync();
-                }
+                model.MyApplications = await _context.LeaveApplications
+                    .Include(l => l.ReviewedByUser)
+                    .Where(l => (userId > 0 && l.UserId == userId) || (studentId.HasValue && l.StudentId == studentId.Value))
+                    .OrderByDescending(l => l.SubmittedAt)
+                    .ToListAsync();
             }
             else
             {
-                // Admin & Teacher View - Both can view, verify, and approve/reject student leave requests
+                // Admin Review View - Only Admin can review and approve/reject all leave applications
                 var query = _context.LeaveApplications
                     .Include(l => l.Student)
+                    .Include(l => l.ApplicantUser)
                     .Include(l => l.ReviewedByUser)
                     .AsQueryable();
 
@@ -74,11 +88,17 @@ namespace AttendanceTrackingSystem.Controllers
                     query = query.Where(l => l.Status == statusFilter);
                 }
 
+                if (!string.IsNullOrEmpty(roleFilter) && roleFilter != "All")
+                {
+                    query = query.Where(l => l.ApplicantRole == roleFilter);
+                }
+
                 if (!string.IsNullOrEmpty(searchString))
                 {
                     var search = searchString.ToLower();
-                    query = query.Where(l => (l.Student != null && l.Student.Name.ToLower().Contains(search)) 
-                                         || (l.Student != null && l.Student.Email.ToLower().Contains(search)) 
+                    query = query.Where(l => l.ApplicantName.ToLower().Contains(search)
+                                         || (l.ApplicantUser != null && l.ApplicantUser.Email.ToLower().Contains(search))
+                                         || (l.Student != null && l.Student.Email.ToLower().Contains(search))
                                          || l.Reason.ToLower().Contains(search));
                 }
 
@@ -91,26 +111,32 @@ namespace AttendanceTrackingSystem.Controllers
             return View(model);
         }
 
-        // POST: Student Apply for Leave
+        // POST: Student or Teacher Apply for Leave
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Student")]
+        [Authorize(Roles = "Student,Teacher")]
         public async Task<IActionResult> Apply(LeaveIndexViewModel indexModel)
         {
             var form = indexModel.ApplyForm;
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            int.TryParse(userIdStr, out int userId);
             var email = User.FindFirstValue(ClaimTypes.Email)?.ToLower();
-            var student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower() == email);
-            if (student == null && !string.IsNullOrEmpty(email))
+            var isTeacher = User.IsInRole("Teacher");
+            var applicantRole = isTeacher ? "Teacher" : "Student";
+
+            var user = await _context.Users.FindAsync(userId);
+            Student? student = null;
+            if (!isTeacher && !string.IsNullOrEmpty(email))
             {
-                var prefix = email.Split('@')[0].Split('-')[0];
-                student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower().StartsWith(prefix));
+                student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower() == email);
+                if (student == null)
+                {
+                    var prefix = email.Split('@')[0].Split('-')[0];
+                    student = await _context.Students.FirstOrDefaultAsync(s => s.Email.ToLower().StartsWith(prefix));
+                }
             }
 
-            if (student == null)
-            {
-                TempData["ErrorMessage"] = "Student profile not found. Please contact administration.";
-                return RedirectToAction(nameof(Index));
-            }
+            var applicantName = isTeacher ? (user?.FullName ?? "Teacher") : (student?.Name ?? user?.FullName ?? "Student");
 
             // Validate dates range
             if (form.EndDate < form.StartDate)
@@ -160,7 +186,10 @@ namespace AttendanceTrackingSystem.Controllers
 
             var leaveApplication = new LeaveApplication
             {
-                StudentId = student.StudentId,
+                UserId = userId > 0 ? userId : null,
+                StudentId = student?.StudentId,
+                ApplicantName = applicantName,
+                ApplicantRole = applicantRole,
                 StartDate = form.StartDate.Date,
                 EndDate = form.EndDate.Date,
                 Reason = form.Reason,
@@ -174,18 +203,19 @@ namespace AttendanceTrackingSystem.Controllers
             _context.LeaveApplications.Add(leaveApplication);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Your leave application has been submitted successfully and is now pending review.";
+            TempData["SuccessMessage"] = "Your leave application has been submitted successfully and is now pending admin review.";
             return RedirectToAction(nameof(Index));
         }
 
-        // POST: Approve Leave Application
+        // POST: Approve Leave Application (Admin Only)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin,Teacher")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Approve(int id, string? remarks)
         {
             var leave = await _context.LeaveApplications
                 .Include(l => l.Student)
+                .Include(l => l.ApplicantUser)
                 .FirstOrDefaultAsync(l => l.LeaveApplicationId == id);
 
             if (leave == null)
@@ -202,35 +232,39 @@ namespace AttendanceTrackingSystem.Controllers
             leave.ReviewedAt = DateTime.Now;
             leave.ReviewerRemarks = string.IsNullOrWhiteSpace(remarks) ? "Approved" : remarks;
 
-            // Auto-mark attendance records within leave dates as 'Excused'
-            var recordsToExcuse = await _context.AttendanceRecords
-                .Include(r => r.AttendanceSession)
-                .Where(r => r.StudentId == leave.StudentId 
-                          && r.AttendanceSession != null
-                          && r.AttendanceSession.SessionDate.Date >= leave.StartDate.Date 
-                          && r.AttendanceSession.SessionDate.Date <= leave.EndDate.Date)
-                .ToListAsync();
-
-            foreach (var rec in recordsToExcuse)
+            // Auto-mark attendance records within leave dates as 'Excused' if student
+            if (leave.StudentId.HasValue)
             {
-                rec.Status = "Excused";
-                rec.Remarks = $"Approved Leave #{leave.LeaveApplicationId}";
+                var recordsToExcuse = await _context.AttendanceRecords
+                    .Include(r => r.AttendanceSession)
+                    .Where(r => r.StudentId == leave.StudentId.Value 
+                              && r.AttendanceSession != null
+                              && r.AttendanceSession.SessionDate.Date >= leave.StartDate.Date 
+                              && r.AttendanceSession.SessionDate.Date <= leave.EndDate.Date)
+                    .ToListAsync();
+
+                foreach (var rec in recordsToExcuse)
+                {
+                    rec.Status = "Excused";
+                    rec.Remarks = $"Approved Leave #{leave.LeaveApplicationId}";
+                }
             }
 
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = $"Leave application for {leave.Student?.Name} has been APPROVED.";
+            TempData["SuccessMessage"] = $"Leave application for {leave.ApplicantName} ({leave.ApplicantRole}) has been APPROVED.";
             return RedirectToAction(nameof(Index));
         }
 
-        // POST: Reject Leave Application
+        // POST: Reject Leave Application (Admin Only)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin,Teacher")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Reject(int id, string? remarks)
         {
             var leave = await _context.LeaveApplications
                 .Include(l => l.Student)
+                .Include(l => l.ApplicantUser)
                 .FirstOrDefaultAsync(l => l.LeaveApplicationId == id);
 
             if (leave == null)
@@ -249,7 +283,7 @@ namespace AttendanceTrackingSystem.Controllers
 
             await _context.SaveChangesAsync();
 
-            TempData["ErrorMessage"] = $"Leave application for {leave.Student?.Name} has been REJECTED.";
+            TempData["ErrorMessage"] = $"Leave application for {leave.ApplicantName} ({leave.ApplicantRole}) has been REJECTED.";
             return RedirectToAction(nameof(Index));
         }
     }

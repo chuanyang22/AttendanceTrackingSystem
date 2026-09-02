@@ -31,13 +31,15 @@ using System;
 
      public class LeaveIndexViewModel
      {
-         public bool IsStudent { get; set; }
+         public bool IsAdmin { get; set; }
+         public bool IsApplicant { get; set; } // True for Student & Teacher
+         public string UserRole { get; set; } = "Student"; // Student, Teacher, Admin
          public LeaveApplyViewModel ApplyForm { get; set; } = new LeaveApplyViewModel();
 
-         // For Student
+         // For Student & Teacher applicants
          public List<LeaveApplication> MyApplications { get; set; } = new List<LeaveApplication>();
 
-         // For Teacher / Admin
+         // For Admin reviewer
          public List<LeaveApplication> Applications { get; set; } = new List<LeaveApplication>();
 
          public int TotalCount { get; set; }
@@ -46,6 +48,7 @@ using System;
          public int RejectedCount { get; set; }
 
          public string StatusFilter { get; set; } = "All";
+         public string RoleFilter { get; set; } = "All";
          public string SearchString { get; set; } = "";
      }
  }

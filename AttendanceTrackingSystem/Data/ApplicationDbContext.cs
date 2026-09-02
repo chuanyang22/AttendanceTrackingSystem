@@ -33,7 +33,13 @@ namespace AttendanceTrackingSystem.Data
                 .HasOne(l => l.Student)
                 .WithMany()
                 .HasForeignKey(l => l.StudentId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<LeaveApplication>()
+                .HasOne(l => l.ApplicantUser)
+                .WithMany()
+                .HasForeignKey(l => l.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<LeaveApplication>()
                 .HasOne(l => l.ReviewedByUser)

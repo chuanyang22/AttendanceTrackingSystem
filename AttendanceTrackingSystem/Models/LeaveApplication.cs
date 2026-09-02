@@ -9,11 +9,21 @@ namespace AttendanceTrackingSystem.Models
         [Key]
         public int LeaveApplicationId { get; set; }
 
-        [Required]
-        public int StudentId { get; set; }
+        public int? StudentId { get; set; }
 
         [ForeignKey("StudentId")]
         public virtual Student? Student { get; set; }
+
+        public int? UserId { get; set; }
+
+        [ForeignKey("UserId")]
+        public virtual User? ApplicantUser { get; set; }
+
+        [StringLength(100)]
+        public string ApplicantName { get; set; } = string.Empty;
+
+        [StringLength(50)]
+        public string ApplicantRole { get; set; } = "Student"; // "Student" or "Teacher"
 
         [Required(ErrorMessage = "Start date is required.")]
         [DataType(DataType.Date)]
