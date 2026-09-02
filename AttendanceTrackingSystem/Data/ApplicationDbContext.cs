@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using AttendanceTrackingSystem.Models;
 
 namespace AttendanceTrackingSystem.Data
@@ -17,6 +17,7 @@ namespace AttendanceTrackingSystem.Data
         public DbSet<AttendanceSession> AttendanceSessions { get; set; }
         public DbSet<PublicHoliday> PublicHolidays { get; set; }
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
+        public DbSet<LeaveApplication> LeaveApplications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -26,6 +27,18 @@ namespace AttendanceTrackingSystem.Data
                 .HasOne(c => c.Teacher)
                 .WithMany()
                 .HasForeignKey(c => c.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<LeaveApplication>()
+                .HasOne(l => l.Student)
+                .WithMany()
+                .HasForeignKey(l => l.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<LeaveApplication>()
+                .HasOne(l => l.ReviewedByUser)
+                .WithMany()
+                .HasForeignKey(l => l.ReviewedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

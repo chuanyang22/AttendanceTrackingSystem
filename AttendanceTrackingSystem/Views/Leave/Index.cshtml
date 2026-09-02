@@ -1,0 +1,506 @@
+@model AttendanceTrackingSystem.Models.ViewModels.LeaveIndexViewModel
+
+@{
+    ViewData["Title"] = Model.IsStudent ? "Application Leave" : "Student Leave Applications";
+}
+
+<div class="container-fluid py-2">
+    @if (Model.IsStudent)
+    {
+        <!-- STUDENT LEAVE INTERFACE -->
+        <div class="row mb-4 align-items-center">
+            <div class="col">
+                <h2 class="fw-bold text-dark mb-1">
+                    <i class="bi bi-file-earmark-medical text-primary me-2"></i>Leave Application
+                </h2>
+                <p class="text-muted mb-0">Submit your leave request with official supporting proof documents and monitor your approval status.</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Apply Form Column -->
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-header bg-primary text-white py-3 rounded-top-3">
+                        <h5 class="mb-0 fw-semibold"><i class="bi bi-send-plus me-2"></i>Apply for Leave</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <form asp-action="Apply" method="post" enctype="multipart/form-data">
+                            @Html.AntiForgeryToken()
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label asp-for="ApplyForm.StartDate" class="form-label fw-semibold"></label>
+                                    <input asp-for="ApplyForm.StartDate" type="date" class="form-control" required id="startDateInput" />
+                                    <span asp-validation-for="ApplyForm.StartDate" class="text-danger small"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="ApplyForm.EndDate" class="form-label fw-semibold"></label>
+                                    <input asp-for="ApplyForm.EndDate" type="date" class="form-control" required id="endDateInput" />
+                                    <span asp-validation-for="ApplyForm.EndDate" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="ApplyForm.Reason" class="form-label fw-semibold"></label>
+                                <select asp-for="ApplyForm.Reason" class="form-select" required>
+                                    <option value="">-- Select Leave Reason --</option>
+                                    <option value="Medical / Sick Leave (MC)">Medical / Sick Leave (MC)</option>
+                                    <option value="Hospitalization / Surgery">Hospitalization / Surgery</option>
+                                    <option value="Family Emergency">Family Emergency</option>
+                                    <option value="Bereavement / Funeral">Bereavement / Funeral</option>
+                                    <option value="Official TARUMT Event / Competition">Official TARUMT Event / Competition</option>
+                                    <option value="Personal / Other">Personal / Other Reason</option>
+                                </select>
+                                <span asp-validation-for="ApplyForm.Reason" class="text-danger small"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="ApplyForm.Description" class="form-label fw-semibold"></label>
+                                <textarea asp-for="ApplyForm.Description" class="form-control" rows="3" placeholder="Provide brief details about your leave (e.g. Clinic name, symptoms, reason)..."></textarea>
+                                <span asp-validation-for="ApplyForm.Description" class="text-danger small"></span>
+                            </div>
+
+                            <div class="mb-4">
+                                <label asp-for="ApplyForm.ProofFile" class="form-label fw-semibold"></label>
+                                <div class="input-group">
+                                    <input asp-for="ApplyForm.ProofFile" type="file" class="form-control" required id="proofFileInput" />
+                                </div>
+                                <div class="form-text text-muted small mt-1">
+                                    <i class="bi bi-info-circle me-1"></i>Accepted formats: <strong>PDF, JPEG, JPG, PNG</strong> only (Max: 10MB).
+                                </div>
+                                <div id="fileFormatError" class="text-danger small mt-1 @(TempData["FileFormatError"] != null ? "" : "d-none")">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Error: Invalid file format. Only PDF, JPEG, JPG, or PNG files are accepted.
+                                </div>
+                                <div id="fileSizeError" class="text-danger small mt-1 d-none">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Error: File size exceeds the 10MB limit.
+                                </div>
+                                <span asp-validation-for="ApplyForm.ProofFile" class="text-danger small"></span>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">
+                                <i class="bi bi-cloud-arrow-up-fill me-2"></i>Submit Leave Application
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Column -->
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-clock-history me-2 text-primary"></i>My Leave Applications History</h5>
+                        <span class="badge bg-secondary rounded-pill">@Model.MyApplications.Count record(s)</span>
+                    </div>
+                    <div class="card-body p-3 p-md-4">
+                        @if (Model.MyApplications != null && Model.MyApplications.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light small text-uppercase text-muted">
+                                        <tr>
+                                            <th>Date Range</th>
+                                            <th>Reason</th>
+                                            <th>Proof</th>
+                                            <th>Status</th>
+                                            <th>Submitted</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var app in Model.MyApplications)
+                                        {
+                                            var days = (app.EndDate.Date - app.StartDate.Date).Days + 1;
+                                            <tr>
+                                                <td>
+                                                    <div class="fw-bold text-dark">@app.StartDate.ToString("dd MMM yyyy")</div>
+                                                    <div class="small text-muted">to @app.EndDate.ToString("dd MMM yyyy")</div>
+                                                    <span class="badge bg-light text-dark border mt-1">@(days == 1 ? "1 day" : $"{days} days")</span>
+                                                </td>
+                                                <td>
+                                                    <div class="fw-semibold text-primary">@app.Reason</div>
+                                                    @if (!string.IsNullOrEmpty(app.Description))
+                                                    {
+                                                        <div class="small text-muted text-truncate" style="max-width: 180px;" title="@app.Description">@app.Description</div>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(app.ReviewerRemarks))
+                                                    {
+                                                        <div class="small mt-1 p-1 bg-light rounded text-secondary border">
+                                                            <strong>Note:</strong> @app.ReviewerRemarks
+                                                        </div>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <a href="@app.ProofDocumentUrl" target="_blank" class="btn btn-outline-secondary btn-sm rounded-pill px-2">
+                                                        <i class="bi bi-paperclip me-1"></i>View
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    @if (app.Status == "Pending")
+                                                    {
+                                                        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill shadow-sm">
+                                                            <i class="bi bi-hourglass-split me-1"></i>Pending
+                                                        </span>
+                                                    }
+                                                    else if (app.Status == "Approved")
+                                                    {
+                                                        <span class="badge bg-success px-3 py-2 rounded-pill shadow-sm">
+                                                            <i class="bi bi-check-circle-fill me-1"></i>Approved
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger px-3 py-2 rounded-pill shadow-sm">
+                                                            <i class="bi bi-x-circle-fill me-1"></i>Rejected
+                                                        </span>
+                                                    }
+                                                </td>
+                                                <td class="small text-muted">
+                                                    @app.SubmittedAt.ToString("dd/MM/yyyy")
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-5">
+                                <i class="bi bi-folder2-open display-4 text-muted opacity-50"></i>
+                                <h6 class="mt-3 text-muted fw-semibold">No leave applications submitted yet.</h6>
+                                <p class="small text-muted">Fill out the form on the left to submit your first leave application.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- ADMIN & TEACHER INTERFACE -->
+        <div class="row mb-4 align-items-center">
+            <div class="col">
+                <h2 class="fw-bold text-dark mb-1">
+                    <i class="bi bi-file-earmark-medical text-primary me-2"></i>Student Leave Applications
+                </h2>
+                <p class="text-muted mb-0">Review, verify supporting proof documents, and approve or reject student leave requests.</p>
+            </div>
+        </div>
+
+        <!-- Metric Counter Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-lg-3">
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase">Total Requests</div>
+                            <div class="fs-3 fw-bold text-dark mt-1">@Model.TotalCount</div>
+                        </div>
+                        <div class="p-3 bg-primary bg-opacity-10 text-primary rounded-circle">
+                            <i class="bi bi-files fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100 border-start border-warning border-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase">Pending Review</div>
+                            <div class="fs-3 fw-bold text-warning mt-1">@Model.PendingCount</div>
+                        </div>
+                        <div class="p-3 bg-warning bg-opacity-10 text-warning rounded-circle">
+                            <i class="bi bi-hourglass-split fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100 border-start border-success border-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase">Approved</div>
+                            <div class="fs-3 fw-bold text-success mt-1">@Model.ApprovedCount</div>
+                        </div>
+                        <div class="p-3 bg-success bg-opacity-10 text-success rounded-circle">
+                            <i class="bi bi-check-circle fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100 border-start border-danger border-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase">Rejected</div>
+                            <div class="fs-3 fw-bold text-danger mt-1">@Model.RejectedCount</div>
+                        </div>
+                        <div class="p-3 bg-danger bg-opacity-10 text-danger rounded-circle">
+                            <i class="bi bi-x-circle fs-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter and Search Header -->
+        <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <div class="card-body p-3">
+                <form method="get" class="row g-2 align-items-center">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" name="searchString" value="@Model.SearchString" class="form-control border-start-0" placeholder="Search student name, email, or reason..." />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="btn-group w-100" role="group">
+                            <a asp-action="Index" asp-route-statusFilter="All" asp-route-searchString="@Model.SearchString" class="btn @(Model.StatusFilter == "All" ? "btn-primary" : "btn-outline-secondary")">All</a>
+                            <a asp-action="Index" asp-route-statusFilter="Pending" asp-route-searchString="@Model.SearchString" class="btn @(Model.StatusFilter == "Pending" ? "btn-warning text-dark" : "btn-outline-secondary")">Pending (@Model.PendingCount)</a>
+                            <a asp-action="Index" asp-route-statusFilter="Approved" asp-route-searchString="@Model.SearchString" class="btn @(Model.StatusFilter == "Approved" ? "btn-success" : "btn-outline-secondary")">Approved</a>
+                            <a asp-action="Index" asp-route-statusFilter="Rejected" asp-route-searchString="@Model.SearchString" class="btn @(Model.StatusFilter == "Rejected" ? "btn-danger" : "btn-outline-secondary")">Rejected</a>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel-fill me-1"></i> Filter</button>
+                        <a asp-action="Index" class="btn btn-light border ms-1">Reset</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Applications Table -->
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-card-checklist me-2 text-primary"></i>Applications List & Review History</h5>
+                <span class="badge bg-secondary rounded-pill">@Model.Applications.Count application(s)</span>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.Applications != null && Model.Applications.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light small text-uppercase text-muted">
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Leave Period</th>
+                                    <th>Reason & Details</th>
+                                    <th>Proof Document</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var app in Model.Applications)
+                                {
+                                    var days = (app.EndDate.Date - app.StartDate.Date).Days + 1;
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold text-dark">@app.Student?.Name</div>
+                                            <div class="small text-muted">@app.Student?.Email</div>
+                                            <div class="small text-muted mt-1"><i class="bi bi-calendar-event me-1"></i>Applied: @app.SubmittedAt.ToString("dd MMM yyyy")</div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold text-dark">@app.StartDate.ToString("dd MMM yyyy")</div>
+                                            <div class="small text-muted">to @app.EndDate.ToString("dd MMM yyyy")</div>
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 mt-1">
+                                                @(days == 1 ? "1 day" : $"{days} days")
+                                            </span>
+                                        </td>
+                                        <td style="max-width: 250px;">
+                                            <span class="badge bg-secondary text-white mb-1">@app.Reason</span>
+                                            @if (!string.IsNullOrEmpty(app.Description))
+                                            {
+                                                <p class="small text-muted mb-0">@app.Description</p>
+                                            }
+                                            @if (!string.IsNullOrEmpty(app.ReviewerRemarks))
+                                            {
+                                                <div class="small mt-1 text-secondary">
+                                                    <i class="bi bi-chat-left-quote me-1"></i><strong>Review Note:</strong> @app.ReviewerRemarks
+                                                </div>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a href="@app.ProofDocumentUrl" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill shadow-sm px-3">
+                                                <i class="bi bi-file-earmark-arrow-down me-1"></i>View Proof
+                                            </a>
+                                        </td>
+                                        <td>
+                                            @if (app.Status == "Pending")
+                                            {
+                                                <span class="badge bg-warning text-dark px-3 py-2 rounded-pill shadow-sm">
+                                                    <i class="bi bi-hourglass-split me-1"></i>Pending
+                                                </span>
+                                            }
+                                            else if (app.Status == "Approved")
+                                            {
+                                                <span class="badge bg-success px-3 py-2 rounded-pill shadow-sm">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Approved
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger px-3 py-2 rounded-pill shadow-sm">
+                                                    <i class="bi bi-x-circle-fill me-1"></i>Rejected
+                                                </span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (app.Status == "Pending")
+                                            {
+                                                <button type="button" class="btn btn-success btn-sm rounded-2 me-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#approveModal-@app.LeaveApplicationId">
+                                                    <i class="bi bi-check-lg me-1"></i>Approve
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm rounded-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#rejectModal-@app.LeaveApplicationId">
+                                                    <i class="bi bi-x-lg me-1"></i>Reject
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle rounded-2" data-bs-toggle="dropdown">
+                                                        Change Decision
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                                                        <li>
+                                                            <button class="dropdown-item text-success" data-bs-toggle="modal" data-bs-target="#approveModal-@app.LeaveApplicationId">
+                                                                <i class="bi bi-check-circle me-1"></i>Set as Approved
+                                                            </button>
+                                                        </li>
+                                                        <li>
+                                                            <button class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#rejectModal-@app.LeaveApplicationId">
+                                                                <i class="bi bi-x-circle me-1"></i>Set as Rejected
+                                                            </button>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            }
+
+                                            <!-- Approve Modal -->
+                                            <div class="modal fade text-start" id="approveModal-@app.LeaveApplicationId" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                    <div class="modal-content">
+                                                        <form asp-action="Approve" method="post">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="id" value="@app.LeaveApplicationId" />
+                                                            <div class="modal-header bg-success text-white">
+                                                                <h5 class="modal-title"><i class="bi bi-check-circle-fill me-2"></i>Approve Leave Application</h5>
+                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body p-4">
+                                                                <p>Are you sure you want to approve leave for <strong>@app.Student?.Name</strong> from <strong>@app.StartDate.ToString("dd MMM yyyy")</strong> to <strong>@app.EndDate.ToString("dd MMM yyyy")</strong>?</p>
+                                                                <div class="alert alert-info py-2 small">
+                                                                    <i class="bi bi-info-circle me-1"></i>Approving this request will automatically mark the student's scheduled attendance records in this date range as <strong>Excused</strong>.
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label fw-semibold">Approval Remarks / Notes (Optional):</label>
+                                                                    <input type="text" name="remarks" class="form-control" placeholder="e.g. Valid MC verified / Approved by Faculty" />
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <button type="submit" class="btn btn-success px-4"><i class="bi bi-check-lg me-1"></i>Confirm Approval</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Reject Modal -->
+                                            <div class="modal fade text-start" id="rejectModal-@app.LeaveApplicationId" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                    <div class="modal-content">
+                                                        <form asp-action="Reject" method="post">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="id" value="@app.LeaveApplicationId" />
+                                                            <div class="modal-header bg-danger text-white">
+                                                                <h5 class="modal-title"><i class="bi bi-x-circle-fill me-2"></i>Reject Leave Application</h5>
+                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body p-4">
+                                                                <p>Are you sure you want to reject leave for <strong>@app.Student?.Name</strong>?</p>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label fw-semibold">Reason for Rejection <span class="text-danger">*</span>:</label>
+                                                                    <textarea name="remarks" class="form-control" rows="3" required placeholder="e.g. Invalid document / Missing clinic stamp / Dates do not match"></textarea>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <button type="submit" class="btn btn-danger px-4"><i class="bi bi-x-lg me-1"></i>Confirm Rejection</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox display-4 text-muted opacity-50"></i>
+                        <h6 class="mt-3 text-muted fw-semibold">No leave applications found.</h6>
+                        <p class="small text-muted">There are currently no student leave requests matching your selected filter.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var startInput = document.getElementById('startDateInput');
+            var endInput = document.getElementById('endDateInput');
+            if (startInput && endInput) {
+                startInput.addEventListener('change', function() {
+                    if (endInput.value && endInput.value < startInput.value) {
+                        endInput.value = startInput.value;
+                    }
+                    endInput.min = startInput.value;
+                });
+            }
+
+            var proofInput = document.getElementById('proofFileInput');
+            var formatError = document.getElementById('fileFormatError');
+            var sizeError = document.getElementById('fileSizeError');
+
+            if (proofInput && formatError) {
+                proofInput.addEventListener('change', function() {
+                    if (!proofInput.files || proofInput.files.length === 0) {
+                        formatError.classList.add('d-none');
+                        if (sizeError) sizeError.classList.add('d-none');
+                        return;
+                    }
+
+                    var file = proofInput.files[0];
+                    var fileName = file.name.toLowerCase();
+                    var allowed = ['.pdf', '.jpg', '.jpeg', '.png'];
+                    var isValidFormat = allowed.some(function(ext) { return fileName.endsWith(ext); });
+
+                    if (!isValidFormat) {
+                        formatError.classList.remove('d-none');
+                        proofInput.value = ''; // Clear the invalid file selection
+                    } else {
+                        formatError.classList.add('d-none');
+                    }
+
+                    if (file.size > 10 * 1024 * 1024) {
+                        if (sizeError) sizeError.classList.remove('d-none');
+                        proofInput.value = '';
+                    } else {
+                        if (sizeError) sizeError.classList.add('d-none');
+                    }
+                });
+            }
+        });
+    </script>
+}
