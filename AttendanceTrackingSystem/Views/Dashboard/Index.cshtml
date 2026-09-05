@@ -1,4 +1,4 @@
-@model AttendanceTrackingSystem.Models.ViewModels.DashboardViewModel
+﻿@model AttendanceTrackingSystem.Models.ViewModels.DashboardViewModel
 
 <style>
     .quick-access-btn:hover small.text-muted {
@@ -206,7 +206,7 @@
         <!-- Charts Row -->
         <div class="row g-4 mb-4">
             <div class="col-md-6">
-                <div class="card shadow-sm border-0 p-4 h-100">
+                <div class="card shadow-sm border p-4 h-100">
                     <h5 class="fw-bold mb-4 text-primary"><i class="bi bi-pie-chart-fill me-2"></i>Overall Attendance Rate</h5>
                     <div style="height: 300px; position: relative;">
                         <canvas id="attendancePieChart"></canvas>
@@ -214,7 +214,7 @@
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="card shadow-sm border-0 p-4 h-100">
+                <div class="card shadow-sm border p-4 h-100">
                     <h5 class="fw-bold mb-4 text-success"><i class="bi bi-bar-chart-line-fill me-2"></i>Attendance Breakdown</h5>
                     <div style="height: 300px; position: relative;">
                         <canvas id="attendanceBarChart"></canvas>
@@ -228,7 +228,7 @@
         <!-- Admin Quick Access & Recent -->
         <div class="row g-4 mb-4">
             <div class="col-md-7">
-                <div class="card shadow-sm border-0 p-4 h-100">
+                <div class="card shadow-sm border p-4 h-100">
                     <h5 class="fw-bold mb-4 text-primary"><i class="bi bi-grid-fill me-2"></i>Quick Access Features</h5>
                     <div class="row g-3">
                         <div class="col-sm-6">
@@ -260,7 +260,7 @@
             </div>
             
             <div class="col-md-5">
-                <div class="card shadow-sm border-0 p-4 h-100">
+                <div class="card shadow-sm border p-4 h-100">
                     <h5 class="fw-bold mb-4 text-warning"><i class="bi bi-clock-history me-2"></i>Recently Visited</h5>
                     <div id="recentPagesContainer" class="list-group list-group-flush">
                         <div class="text-center text-muted py-4">
@@ -327,6 +327,9 @@
         var excused = @Model.ExcusedCount;
 
         // Pie Chart
+        Chart.defaults.color = getComputedStyle(document.body).getPropertyValue("--bs-body-color") || "#6c757d";
+        Chart.defaults.borderColor = getComputedStyle(document.body).getPropertyValue("--bs-border-color") || "#dee2e6";
+        
         var pieChartEl = document.getElementById('attendancePieChart');
         if (pieChartEl) {
             new Chart(pieChartEl, {
@@ -377,6 +380,9 @@
         }
     </script>
 }
+
+
+
 
 
 
