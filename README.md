@@ -4,8 +4,8 @@ password: Admin123!
 
 Teacher role:
 email:tiesw-wm25@student.tarc.edu.my
-Teacher123!
+password:Teacher123!
 
 Student role:
 email:shivendrat@student.tarc.edu.my
-Student123!
+password:Student123!
