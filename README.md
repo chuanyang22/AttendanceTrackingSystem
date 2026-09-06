@@ -1,8 +1,11 @@
-admin: teecy-wm25@student.tarc.edu.my
-Admin123!
+Admin role:
+email:teecy-wm25@student.tarc.edu.my
+password: Admin123!
 
-teacher: tiesw-wm25@student.tarc.edu.my
+Teacher role:
+email:tiesw-wm25@student.tarc.edu.my
 Teacher123!
 
-student: shivendrat-wm25@student.tarc.edu.my
+Student role:
+email:shivendrat@student.tarc.edu.my
 Student123!
